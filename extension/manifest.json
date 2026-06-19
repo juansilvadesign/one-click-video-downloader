@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "One-Click Video Downloader",
+  "description": "Detect and locally save authorized page videos with automatic stream merging.",
+  "version": "0.1.0",
+  "minimum_chrome_version": "102",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "One-Click Video Downloader",
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "downloads",
+    "nativeMessaging",
+    "storage",
+    "tabs",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ]
+}
+

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>One-Click Video Downloader</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">LOCAL VIDEO</p>
+          <h1>Ready when the video is.</h1>
+        </div>
+        <span id="detected-count" class="count">0</span>
+      </header>
+
+      <section id="detection" class="card">
+        <div class="status-row">
+          <span id="status-dot" class="dot"></span>
+          <div>
+            <p id="plan-label" class="primary">Play a video on this page</p>
+            <p id="plan-detail" class="secondary">Detection happens automatically.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="progress-card" class="card hidden" aria-live="polite">
+        <div class="progress-copy">
+          <span id="progress-label">Processing locally</span>
+          <span id="progress-value"></span>
+        </div>
+        <div class="progress-track"><div id="progress-bar"></div></div>
+        <p id="job-message" class="secondary"></p>
+      </section>
+
+      <button id="download" class="download" disabled>
+        <span>Download best quality</span>
+        <span aria-hidden="true">↓</span>
+      </button>
+
+      <div class="footer-row">
+        <span id="host-status">Checking local FFmpeg…</span>
+        <button id="clear" class="text-button">Clear</button>
+      </div>
+
+      <p id="error" class="error hidden" role="alert"></p>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
+
