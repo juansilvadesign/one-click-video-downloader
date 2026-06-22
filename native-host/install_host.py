@@ -11,6 +11,7 @@ import re
 import shlex
 import shutil
 import stat
+import subprocess
 import sys
 import venv
 from pathlib import Path
@@ -124,7 +125,24 @@ def unregister_windows_manifest(browser: str) -> None:
             pass
 
 
-def install(extension_id: str, browser: str) -> list[Path]:
+def install_optional_yt_dlp(python_executable: Path) -> None:
+    requirements = Path(__file__).resolve().parents[1] / "requirements-yt-dlp.txt"
+    if not requirements.exists():
+        raise FileNotFoundError(f"Missing optional dependency lock file: {requirements}")
+    subprocess.run(
+        [str(python_executable), "-m", "ensurepip", "--upgrade"],
+        check=True,
+    )
+    subprocess.run(
+        [
+            str(python_executable), "-m", "pip", "install",
+            "--disable-pip-version-check", "--requirement", str(requirements),
+        ],
+        check=True,
+    )
+
+
+def install(extension_id: str, browser: str, *, with_yt_dlp: bool = False) -> list[Path]:
     system = platform.system()
     root = installation_root(system)
     root.mkdir(parents=True, exist_ok=True)
@@ -135,6 +153,8 @@ def install(extension_id: str, browser: str) -> list[Path]:
     python_executable = production_python(root, system)
     if not python_executable.exists():
         venv.EnvBuilder(with_pip=False).create(root / ".venv")
+    if with_yt_dlp:
+        install_optional_yt_dlp(python_executable)
     launcher = create_launcher(root, installed_host, python_executable, system)
     payload = manifest_payload(extension_id, launcher)
 
@@ -161,6 +181,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--browser", choices=BROWSERS, default="chrome")
     parser.add_argument("--uninstall", action="store_true")
+    parser.add_argument(
+        "--with-yt-dlp",
+        action="store_true",
+        help="install the pinned optional page extractor into the production .venv",
+    )
     parser.add_argument("--extension-id", type=validate_extension_id)
     args = parser.parse_args()
     if not args.uninstall and not args.extension_id:
@@ -174,7 +199,7 @@ def main() -> int:
         locations = uninstall(args.browser)
         print(f"Unregistered {HOST_NAME} from {args.browser}:")
     else:
-        locations = install(args.extension_id, args.browser)
+        locations = install(args.extension_id, args.browser, with_yt_dlp=args.with_yt_dlp)
         print(f"Registered {HOST_NAME} for {args.browser}:")
     for location in locations:
         print(f"  {location}")
@@ -185,6 +210,8 @@ def main() -> int:
             print(f"FFmpeg: {ffmpeg}")
         else:
             print("WARNING: FFmpeg is not on PATH for this operating system.", file=sys.stderr)
+        if args.with_yt_dlp:
+            print("yt-dlp: installed from requirements-yt-dlp.txt in the production .venv")
         print("Reload the extension from the browser's extensions page.")
     return 0
 

@@ -1,0 +1,2 @@
+# Optional page extractor. Install only through install_host.py --with-yt-dlp.
+yt-dlp==2026.6.9

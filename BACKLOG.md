@@ -1,7 +1,7 @@
 # One-Click Video Downloader Backlog
 
 **Last reviewed:** 2026-06-19  
-**Current release:** MVP `0.1.0`
+**Current release:** `0.2.0` implemented; Windows Chrome smoke verification pending
 
 This backlog preserves the extension's core constraint: one user action should produce one local video without exposing manifests, fragments, codecs, or downloader-engine choices during the normal path.
 
@@ -19,12 +19,12 @@ This backlog preserves the extension's core constraint: one user action should p
 
 | ID | Priority | Item | Status |
 |---|---|---|---|
-| OCVD-001 | P0 | Controllable native jobs and live-stream mode | Planned |
-| OCVD-002 | P0 | Network resilience and dependency preflight | Planned |
-| OCVD-003 | P1 | Codec-aware selective transcoding | Planned |
-| OCVD-004 | P1 | Optional yt-dlp page fallback | Planned |
-| OCVD-005 | P2 | In-memory HLS manifest detection | Conditional |
-| OCVD-006 | P2 | Prevent system sleep during native jobs | Planned |
+| OCVD-001 | P0 | Controllable native jobs and live-stream mode | Implemented; desktop smoke pending |
+| OCVD-002 | P0 | Network resilience and dependency preflight | Implemented; desktop smoke pending |
+| OCVD-003 | P1 | Codec-aware selective transcoding | Implemented; desktop smoke pending |
+| OCVD-004 | P1 | Optional yt-dlp page fallback | Implemented; extractor/browser smoke pending |
+| OCVD-005 | P2 | In-memory HLS manifest detection | Implemented as opt-in; browser fixture pending |
+| OCVD-006 | P2 | Prevent system sleep during native jobs | Implemented; browser verification pending |
 
 ## P0 — Reliability and control
 
@@ -32,7 +32,7 @@ This backlog preserves the extension's core constraint: one user action should p
 
 **Outcome:** Native FFmpeg work remains controllable after it starts, including streams with no finite duration.
 
-**Why:** The current native host processes one download synchronously. It cannot read a cancel message while FFmpeg is running, and a live HLS manifest can therefore become an unbounded job.
+**Why:** Before `0.2.0`, the native host processed one download synchronously. It could not read a cancel message while FFmpeg was running, so a live HLS manifest could become an unbounded job.
 
 **Scope:**
 
@@ -48,12 +48,12 @@ This backlog preserves the extension's core constraint: one user action should p
 
 **Acceptance criteria:**
 
-- [ ] The host can receive and acknowledge a stop/cancel message while FFmpeg is active.
-- [ ] Stopping a live recording produces a playable MP4 containing both available media streams.
-- [ ] Canceling a VOD job leaves no misleading completed file.
-- [ ] Popup state differentiates `running`, `recording`, `stopping`, `canceled`, `complete`, and `error`.
-- [ ] Closing the popup does not stop the job; reopening it restores the active state.
-- [ ] Windows and Linux tests exercise graceful stop and forced-termination fallback.
+- [x] The host can receive and acknowledge a stop/cancel message while a worker is active.
+- [x] Stopping a live-style FFmpeg process produces a playable MP4 containing both media streams.
+- [x] Canceling a VOD job leaves no misleading completed file.
+- [x] Popup state differentiates `running`, `recording`, `retrying`, `stopping`, `canceled`, `complete`, and `error`.
+- [x] Job state lives in the service worker/session rather than the popup; desktop reopen verification remains pending.
+- [x] Tests exercise graceful POSIX stop plus Windows and POSIX forced-termination branches.
 
 **References:**
 
@@ -79,11 +79,11 @@ This backlog preserves the extension's core constraint: one user action should p
 
 **Acceptance criteria:**
 
-- [ ] Missing `ffprobe` is detected before the user starts a download.
-- [ ] One injected connection drop recovers without user action.
-- [ ] Permanent `401`, `403`, and malformed-manifest failures do not loop indefinitely.
-- [ ] Popup feedback shows the retry attempt without revealing the media URL.
-- [ ] Retry limits and delays are covered by deterministic tests.
+- [x] Missing `ffprobe` is detected during the host readiness check.
+- [x] An injected HTTP `503` recovers without user action in the localhost smoke test.
+- [x] Permanent authentication and malformed-input failures are excluded from whole-job retry.
+- [x] Popup feedback uses sanitized retry events without media URLs.
+- [x] Retry limits and delays are covered by deterministic tests.
 
 **References:**
 
@@ -96,7 +96,7 @@ This backlog preserves the extension's core constraint: one user action should p
 
 **Outcome:** Compatible streams remain lossless and fast; only incompatible streams are transcoded.
 
-**Why:** The current fallback retries with H.264 video and AAC audio together. An incompatible audio codec should not force a compatible high-quality video stream through a full encode.
+**Why:** The previous fallback retried with H.264 video and AAC audio together. An incompatible audio codec should not force a compatible high-quality video stream through a full encode.
 
 **Scope:**
 
@@ -109,11 +109,11 @@ This backlog preserves the extension's core constraint: one user action should p
 
 **Acceptance criteria:**
 
-- [ ] H.264 + AAC uses `-c:v copy -c:a copy`.
-- [ ] H.264 + incompatible audio copies video and transcodes only audio to AAC.
-- [ ] Incompatible video transcodes to H.264 while compatible audio remains copied when safe.
-- [ ] Tests verify the chosen FFmpeg argument array and resulting codecs.
-- [ ] Progress messaging states whether the job is remuxing or transcoding.
+- [x] H.264 + AAC uses `-c:v copy -c:a copy`.
+- [x] H.264 + incompatible audio copies video and transcodes only audio to AAC.
+- [x] Incompatible video transcodes to H.264 while compatible audio remains copied when safe.
+- [x] Tests verify the chosen FFmpeg argument array and resulting codecs.
+- [x] Progress messaging states whether the job is remuxing or transcoding.
 
 **References:**
 
@@ -139,12 +139,12 @@ This backlog preserves the extension's core constraint: one user action should p
 
 **Acceptance criteria:**
 
-- [ ] A page with no detected media can produce a fallback job when yt-dlp supports it.
-- [ ] Unsupported pages return a concise error without changing the normal detector path.
-- [ ] Playlists are not downloaded accidentally.
-- [ ] Cookie access is disabled by default and clearly surfaced when requested.
-- [ ] Temporary cookie files are removed after success, error, cancellation, and host termination.
-- [ ] Installation and upgrade documentation preserves the production `.venv` rule.
+- [ ] A real page with no detected media produces a fallback job when yt-dlp supports it; desktop smoke pending.
+- [x] Unsupported pages return a concise error without changing the normal detector path.
+- [x] The command forces `--no-playlist`.
+- [x] Cookie access is disabled by default and clearly surfaced when requested.
+- [x] Temporary cookie files are private, process-tracked, and removed on all controlled terminal paths.
+- [x] Installation and upgrade documentation preserves the production `.venv` rule.
 
 **References:**
 
@@ -157,7 +157,7 @@ This backlog preserves the extension's core constraint: one user action should p
 
 **Outcome:** Recover HLS manifests constructed entirely inside the page when `webRequest` cannot observe a usable manifest URL.
 
-**Activation condition:** Implement only after an authorized reproducible page fails normal detection and yt-dlp fallback is unsuitable.
+**Activation:** The implementation remains dormant until the user explicitly enables it for a site after normal detection fails. A real authorized Chrome fixture is still required before considering it browser-verified.
 
 **Scope:**
 
@@ -172,11 +172,11 @@ This backlog preserves the extension's core constraint: one user action should p
 
 **Acceptance criteria:**
 
-- [ ] A fixture-created HLS Blob is detected only after the optional capability is enabled.
-- [ ] Normal pages incur no main-world injection.
-- [ ] Relative segments and key URLs resolve correctly.
-- [ ] Oversized or malformed payloads are rejected before reaching FFmpeg.
-- [ ] The feature adds no remote code and leaks no manifest content to page scripts.
+- [x] A module fixture detects an HLS-typed Blob only after the deep detector is loaded; desktop Chrome verification remains pending.
+- [x] Origins incur no main-world injection until the user explicitly enables deep detection there.
+- [x] Relative segments and key URLs resolve correctly, including a real localhost HLS smoke test.
+- [x] Oversized or malformed payloads are rejected before reaching FFmpeg.
+- [x] The feature adds no remote code; the bridge carries only manifest data already owned by the page.
 
 **References:**
 
@@ -196,11 +196,11 @@ This backlog preserves the extension's core constraint: one user action should p
 
 **Acceptance criteria:**
 
-- [ ] Starting the first native job requests system wakefulness.
-- [ ] Completing the final native job releases it exactly once.
-- [ ] Every error/cancel/disconnect path releases the request.
-- [ ] Direct MP4 browser downloads do not request wakefulness.
-- [ ] Mocked extension tests cover overlapping job-state transitions.
+- [x] Starting the first permitted native job requests system wakefulness.
+- [x] Completing the final native job releases it exactly once.
+- [x] Error, cancel, completion, disconnect, and restart-recovery paths release the request.
+- [x] Direct MP4 browser downloads do not request wakefulness.
+- [x] Mocked extension tests cover overlapping job leases and denied permission.
 
 **Reference:**
 
@@ -227,12 +227,11 @@ These ideas were present in the references but do not currently justify their co
 
 ## Definition of done for every backlog item
 
-- [ ] Existing direct MP4, HLS, DASH, and split-track tests still pass.
-- [ ] New Python tests run through the project `.venv`.
-- [ ] Production behavior runs through the installed production `.venv`.
-- [ ] Native commands remain argument arrays with no shell execution.
-- [ ] Signed URLs, cookies, and authorization headers remain redacted.
-- [ ] Windows Chrome installation or upgrade instructions are updated.
-- [ ] The optional localhost HTTP smoke test covers the new native behavior where applicable.
+- [x] Existing direct MP4, HLS, DASH, and split-track tests still pass.
+- [x] New Python tests run through the project `.venv`.
+- [x] An isolated installer test launches the host through its generated production `.venv`.
+- [x] Native commands remain argument arrays with no shell execution.
+- [x] Signed URLs, cookies, and authorization headers remain redacted.
+- [x] Windows Chrome installation and upgrade instructions are updated.
+- [x] The localhost HTTP smoke test covers retries, inline HLS, merging, and selective codecs.
 - [ ] A manual Windows Chrome smoke test passes before marking the item complete.
-
