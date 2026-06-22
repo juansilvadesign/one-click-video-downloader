@@ -1,10 +1,26 @@
 # One-Click Video Downloader
 
+<p align="center">
+  <a href="assets/showcase/one-click-video-downloader-showcase.mp4">
+    <img src="assets/showcase/one-click-video-downloader-showcase-poster.png" alt="One-Click Video Downloader detecting the best source, processing it locally, and saving an MP4" width="100%">
+  </a>
+</p>
+
+<p align="center">
+  <a href="assets/showcase/one-click-video-downloader-showcase.mp4">Watch the 12-second project showcase (MP4)</a>
+</p>
+
 A personal Manifest V3 extension that detects authorized page video, selects the best available candidate, and saves a local MP4 through one primary action.
 
 It is intentionally smaller than Cat Catch: the resource list, manual parser controls, cloud features, and engine settings are replaced by one automatic plan.
 
 Release `0.2.0` adds controlled live recording, resilient native jobs, codec-aware output, an optional page extractor, opt-in in-memory HLS detection, and sleep prevention. Implementation status and remaining desktop verification are tracked in [BACKLOG.md](BACKLOG.md). Contributor setup and project boundaries are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Brand identity
+
+![One-Click Video Downloader brand system showing the primary lockup, icon, wordmark, and extension icon](assets/logo/brand.png)
+
+The identity combines the page-video frame, play symbol, download action, and cursor click into one mark. The source composition for the showcase is kept in [`hyperframes/readme-showcase`](hyperframes/readme-showcase/) so the motion asset can be reproduced and revised with the project.
 
 ## What works
 
