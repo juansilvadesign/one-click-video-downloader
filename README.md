@@ -1,13 +1,7 @@
 # One-Click Video Downloader
 
 <p align="center">
-  <a href="assets/showcase/one-click-video-downloader-showcase.mp4">
-    <img src="assets/showcase/one-click-video-downloader-showcase-poster.png" alt="One-Click Video Downloader detecting the best source, processing it locally, and saving an MP4" width="100%">
-  </a>
-</p>
-
-<p align="center">
-  <a href="assets/showcase/one-click-video-downloader-showcase.mp4">Watch the 12-second project showcase (MP4)</a>
+  <img src="assets/showcase/one-click-video-downloader-showcase.webp" alt="One-Click Video Downloader detecting the best source, processing it locally, and saving an MP4" width="100%">
 </p>
 
 A personal Manifest V3 extension that detects authorized page video, selects the best available candidate, and saves a local MP4 through one primary action.
