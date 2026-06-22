@@ -214,6 +214,51 @@ h1 {
 .jobs { margin-bottom: 12px; }
 .jobs:empty { display: none; }
 
+.jobs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 2px 2px 8px;
+  color: #6b756f;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.jobs-header .text-button {
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #31513c;
+}
+
+.job-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.job-dismiss {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #8a948d;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.job-dismiss:hover {
+  background: #edf0ee;
+  color: #31513c;
+}
+
+.job-dismiss:disabled { opacity: 0.5; cursor: wait; }
+
 @keyframes indeterminate {
   from { transform: translateX(-30%); }
   to { transform: translateX(480%); }

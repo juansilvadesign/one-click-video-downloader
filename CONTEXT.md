@@ -164,7 +164,7 @@ Release `0.2.0` is working in Windows Chrome. Released capabilities include:
 Released and verified in Windows Chrome (`BACKLOG.md` OCVD-017 and OCVD-018):
 
 - Automatic kebab-case filenames from the page title, with an optional page-heading naming mode (off by default; no manifest change, `scripting` stays optional).
-- Concurrent local downloads (up to three) with a live per-download popup list, while durable job state stays in the service worker.
+- Concurrent local downloads (up to three) with a live per-download popup list — including per-card dismiss and a bulk "Clear finished" that tidy the list without deleting saved files — while durable job state stays in the service worker.
 
 The next work is compatibility hardening, not another downloader engine. Use `BACKLOG.md` as the authoritative scope. Recommended order:
 

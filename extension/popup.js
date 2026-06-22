@@ -8,6 +8,8 @@ const elements = {
   clear: document.querySelector("#clear"),
   host: document.querySelector("#host-status"),
   jobs: document.querySelector("#jobs"),
+  jobsHeader: document.querySelector("#jobs-header"),
+  clearFinished: document.querySelector("#clear-finished"),
   cookieOption: document.querySelector("#cookie-option"),
   useCookies: document.querySelector("#use-cookies"),
   headingOption: document.querySelector("#heading-option"),
@@ -107,6 +109,9 @@ function jobName(job) {
 
 function renderJobs(jobList) {
   const visible = jobList.filter((job) => VISIBLE_STATES.includes(job.status));
+  const finishedCount = visible.filter((job) => !ACTIVE_STATES.includes(job.status)).length;
+  elements.jobsHeader.classList.toggle("hidden", visible.length === 0);
+  elements.clearFinished.classList.toggle("hidden", finishedCount === 0);
   elements.jobs.classList.toggle("hidden", visible.length === 0);
   elements.jobs.replaceChildren(...visible.map(buildJobCard));
 }
@@ -119,10 +124,24 @@ function buildJobCard(job) {
   copy.className = "progress-copy";
   const label = document.createElement("span");
   label.textContent = statusLabel(job);
+
+  const actions = document.createElement("div");
+  actions.className = "job-actions";
   const value = document.createElement("span");
   const progress = Number.isFinite(job.progress) ? Math.round(job.progress) : null;
   value.textContent = progress === null ? "" : `${progress}%`;
-  copy.append(label, value);
+  actions.appendChild(value);
+  if (!ACTIVE_STATES.includes(job.status)) {
+    const dismiss = document.createElement("button");
+    dismiss.type = "button";
+    dismiss.className = "job-dismiss";
+    dismiss.textContent = "×";
+    dismiss.title = "Remove from list";
+    dismiss.setAttribute("aria-label", "Remove from list");
+    dismiss.addEventListener("click", () => dismissJob(dismiss, job.id));
+    actions.appendChild(dismiss);
+  }
+  copy.append(label, actions);
 
   const track = document.createElement("div");
   track.className = "progress-track";
@@ -192,6 +211,30 @@ async function controlJob(button, jobId) {
     button.disabled = false;
   }
 }
+
+async function dismissJob(button, jobId) {
+  button.disabled = true;
+  elements.error.classList.add("hidden");
+  try {
+    const response = await chrome.runtime.sendMessage({ type: "dismissJob", jobId });
+    if (response?.error) throw new Error(response.error);
+    await refresh();
+  } catch (error) {
+    showError(error.message);
+    button.disabled = false;
+  }
+}
+
+elements.clearFinished.addEventListener("click", async () => {
+  elements.error.classList.add("hidden");
+  try {
+    const response = await chrome.runtime.sendMessage({ type: "clearFinishedJobs" });
+    if (response?.error) throw new Error(response.error);
+    await refresh();
+  } catch (error) {
+    showError(error.message);
+  }
+});
 
 elements.useHeading.addEventListener("change", async () => {
   const enabled = elements.useHeading.checked;

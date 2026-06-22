@@ -589,6 +589,37 @@ async function cancelJob(jobId) {
   return jobView(jobs.get(jobId));
 }
 
+// Remove a finished job's card from the popup. This only forgets the local job
+// record; it never touches the saved file. Active jobs must be canceled first.
+async function dismissJob(jobId) {
+  await ready;
+  const job = jobs.get(jobId);
+  if (!job) return { ok: true };
+  if (ACTIVE_JOB_STATES.has(job.status)) {
+    throw new Error("This download is still active. Cancel it first.");
+  }
+  jobs.delete(jobId);
+  browserFallbacks.delete(jobId);
+  await persistJobs();
+  broadcast({ type: "stateUpdated" });
+  return { ok: true };
+}
+
+// Remove every finished (non-active) job card at once. Saved files are untouched.
+async function clearFinishedJobs() {
+  await ready;
+  let changed = false;
+  for (const [id, job] of jobs) {
+    if (ACTIVE_JOB_STATES.has(job.status)) continue;
+    jobs.delete(id);
+    browserFallbacks.delete(id);
+    changed = true;
+  }
+  if (changed) await persistJobs();
+  broadcast({ type: "stateUpdated" });
+  return { ok: true };
+}
+
 function scriptHash(value) {
   let hash = 2166136261;
   for (const character of value) {
@@ -687,6 +718,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     operation = startDownload(message.tabId, { useCookies: Boolean(message.useCookies) });
   } else if (message?.type === "cancelJob") {
     operation = cancelJob(message.jobId);
+  } else if (message?.type === "dismissJob") {
+    operation = dismissJob(message.jobId);
+  } else if (message?.type === "clearFinishedJobs") {
+    operation = clearFinishedJobs();
   } else if (message?.type === "clearTab") {
     operation = clearTab(message.tabId).then(() => ({ ok: true }));
   } else if (message?.type === "enableDeepDetection") {

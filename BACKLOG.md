@@ -509,6 +509,7 @@ This backlog preserves the extension's core constraint: one user action should p
 - Extension background: replace the singleton `jobState` with a `jobs` map keyed by id; route native and `chrome.downloads` events by id; persist/restore multiple jobs; mark each native job in error on host disconnect.
 - Dedupe by `(tab, hashed media URL)` so a double-click cannot start the same download twice; cap concurrent downloads (default 3).
 - Popup: render a live job list with per-row **Cancel/Stop and save**; keep **Download best quality** usable across tabs except when this tab's video is already downloading or the cap is reached.
+- Popup: dismiss a finished card individually (per-card control) or clear them all (**Clear finished**); clearing only forgets the local job record and never deletes the saved file. Active jobs cannot be dismissed.
 - Keep media URLs and request headers out of persisted job state (browser-fallback plans stay in memory only; dedupe keys hash the URL).
 
 **Acceptance criteria:**
@@ -519,6 +520,7 @@ This backlog preserves the extension's core constraint: one user action should p
 - [x] Persisted job state contains no media URLs, headers, or cookies.
 - [x] Two downloads started from different tabs both finish and show live progress (Windows Chrome).
 - [x] Closing and reopening the popup restores the live multi-job list (Windows Chrome).
+- [x] Finished cards can be dismissed individually or cleared in bulk without deleting the saved files (Windows Chrome).
 
 ## Recommended compatibility sequence
 

@@ -261,6 +261,8 @@ Files are named after the page title as a kebab-case slug (for example `showcase
 
 You can run several downloads at once (up to three). Start one, switch to another tab or video, and start another; each shows its own live progress in the popup, and downloads keep running in the background if you close it.
 
+Finished downloads stay listed so you can confirm them. Dismiss a single card with its **×**, or use **Clear finished** to remove them all at once. Clearing only tidies the popup list — it never deletes the saved files.
+
 ## Verification
 
 `npm test` runs:
