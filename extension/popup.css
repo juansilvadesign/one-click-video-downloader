@@ -196,7 +196,7 @@ h1 {
   background: #e6ebe7;
 }
 
-#progress-bar {
+.job-bar {
   width: 15%;
   height: 100%;
   border-radius: inherit;
@@ -204,9 +204,15 @@ h1 {
   transition: width 180ms ease;
 }
 
-#progress-bar.indeterminate {
+.job-bar.indeterminate {
   animation: indeterminate 1.2s ease-in-out infinite alternate;
 }
+
+.job-bar.stopped { background: #cbd2cd; }
+
+.job:last-child { margin-bottom: 0; }
+.jobs { margin-bottom: 12px; }
+.jobs:empty { display: none; }
 
 @keyframes indeterminate {
   from { transform: translateX(-30%); }

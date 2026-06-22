@@ -127,3 +127,18 @@ export function sanitizeFilename(value, fallback = "video") {
     .trim();
   return (cleaned || fallback).slice(0, 160);
 }
+
+// Kebab-case slug for filenames, e.g. "Showcase Video" -> "showcase-video".
+// Unicode-aware: letters/numbers from any script are kept so non-Latin titles
+// are not erased to the fallback. Layered on top of sanitizeFilename, which the
+// native host still applies as the final OS-safe-character pass.
+export function slugify(value, fallback = "video") {
+  const slug = String(value || "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/gu, "")
+    .slice(0, 120)
+    .replace(/-+$/u, "");
+  return slug || fallback;
+}

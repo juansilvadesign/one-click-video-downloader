@@ -5,7 +5,8 @@ import {
   chooseDownloadPlan,
   classifyMedia,
   qualityHint,
-  sanitizeFilename
+  sanitizeFilename,
+  slugify
 } from "../extension/media.js";
 
 function candidate(overrides) {
@@ -75,4 +76,14 @@ test("extracts quality hints and sanitizes output filenames", () => {
   assert.equal(qualityHint("https://example.test/video.mp4?height=1440"), 1440);
   assert.equal(qualityHint("https://example.test/assets/movie-1080p.mp4"), 1080);
   assert.equal(sanitizeFilename('  Lesson: 01 / Intro?  '), "Lesson 01 Intro");
+});
+
+test("slugify produces kebab-case filenames from page headings", () => {
+  assert.equal(slugify("Showcase Video"), "showcase-video");
+  assert.equal(slugify("  Lesson: 01 / Intro?  "), "lesson-01-intro");
+  assert.equal(slugify("Showcase Video - YouTube"), "showcase-video-youtube");
+  assert.equal(slugify("café déjà vu"), "café-déjà-vu");
+  assert.equal(slugify(""), "video");
+  assert.equal(slugify("***", "clip"), "clip");
+  assert.equal(slugify("A".repeat(200)).length, 120);
 });

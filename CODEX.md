@@ -21,8 +21,9 @@ This is a personal Manifest V3 Chrome/Edge extension for saving authorized page 
 ## Current release state
 
 - Version: `0.2.0`
-- Windows Chrome: extension and production native host manually verified
-- Automated baseline: four JavaScript test files and 26 Python tests pass via `npm test` and the project `.venv`
+- Windows Chrome: extension and production native host manually verified through `0.2.0`
+- Automated baseline: four JavaScript test files and 29 Python tests pass via `npm test` and the project `.venv`
+- Released and verified in Windows Chrome: auto-rename to kebab-case filenames with optional page-heading naming (`BACKLOG.md` OCVD-017) and concurrent local downloads (OCVD-018)
 - README showcase: generated and linked
 - Next focus: compatibility fixtures and correctness items in `BACKLOG.md`
 - Do not mark planned backlog acceptance criteria complete without automated evidence and the required Windows Chrome verification.
@@ -68,9 +69,10 @@ The installed native host uses its own production `.venv`, created and bound by 
 
 ### Extension
 
-- `extension/background.js` owns observation, candidates, native connection, and job state.
-- `extension/media.js` owns pure media classification and selection rules.
-- `extension/popup.js` presents one selected plan and explicit fallbacks; do not move durable state into the popup.
+- `extension/background.js` owns observation, candidates, native connection, and multi-job state (a `jobs` map keyed by id; never reintroduce a single-job singleton).
+- `extension/media.js` owns pure media classification, selection rules, and filename slugging (`slugify`); keep `sanitizeFilename` as the host's separate OS-safe-character pass.
+- `extension/popup.js` presents the selected plan, explicit fallbacks, and a live multi-job list; do not move durable state into the popup.
+- Reading the page `<h1>` for filenames is opt-in and on-gesture; keep `scripting` optional and fall back to the tab title when it is absent or injection is blocked.
 - `extension/power.js` owns reference-counted wake-lock leases.
 - `extension/deep-main.js` and `deep-isolated.js` are an opt-in HLS-only fallback, not the normal detector.
 

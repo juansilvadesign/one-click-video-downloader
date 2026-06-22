@@ -65,11 +65,11 @@ Media bytes never pass through Native Messaging. The extension sends control dat
 | File | Responsibility |
 |---|---|
 | `extension/manifest.json` | Manifest V3 identity, permissions, browser floor, icons |
-| `extension/background.js` | Request observation, candidate lifecycle, native connection, job state |
-| `extension/media.js` | Media classification, scoring, pairing, and best-plan selection |
+| `extension/background.js` | Request observation, candidate lifecycle, native connection, multi-job state, opt-in heading read |
+| `extension/media.js` | Media classification, scoring, pairing, best-plan selection, and filename slugging |
 | `extension/popup.html` | Popup structure |
 | `extension/popup.css` | Popup presentation |
-| `extension/popup.js` | User actions, status rendering, native capabilities, fallbacks |
+| `extension/popup.js` | User actions, live multi-job rendering, native capabilities, fallbacks |
 | `extension/power.js` | Reference-counted optional wake-lock lease |
 | `extension/deep-main.js` | Opt-in main-world HLS Blob observation |
 | `extension/deep-isolated.js` | Bounded bridge from page world to extension world |
@@ -160,6 +160,11 @@ Release `0.2.0` is working in Windows Chrome. Released capabilities include:
 - Opt-in bounded HLS Blob detection
 - Optional reference-counted system wake lock
 - Windows production-host installation into its own `.venv`
+
+Released and verified in Windows Chrome (`BACKLOG.md` OCVD-017 and OCVD-018):
+
+- Automatic kebab-case filenames from the page title, with an optional page-heading naming mode (off by default; no manifest change, `scripting` stays optional).
+- Concurrent local downloads (up to three) with a live per-download popup list, while durable job state stays in the service worker.
 
 The next work is compatibility hardening, not another downloader engine. Use `BACKLOG.md` as the authoritative scope. Recommended order:
 

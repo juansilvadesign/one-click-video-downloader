@@ -26,15 +26,7 @@
         </div>
       </section>
 
-      <section id="progress-card" class="card hidden" aria-live="polite">
-        <div class="progress-copy">
-          <span id="progress-label">Processing locally</span>
-          <span id="progress-value"></span>
-        </div>
-        <div class="progress-track"><div id="progress-bar"></div></div>
-        <p id="job-message" class="secondary"></p>
-        <button id="control-job" class="control-button hidden">Cancel download</button>
-      </section>
+      <section id="jobs" class="jobs hidden" aria-live="polite"></section>
 
       <label id="cookie-option" class="option-row hidden">
         <input id="use-cookies" type="checkbox">
@@ -49,6 +41,11 @@
       <button id="enable-deep" class="secondary-action hidden">
         Enable deep detection for this site
       </button>
+
+      <label id="heading-option" class="option-row">
+        <input id="use-heading" type="checkbox">
+        <span>Use page headings for filenames</span>
+      </label>
 
       <div class="footer-row">
         <span id="host-status">Checking local FFmpeg…</span>

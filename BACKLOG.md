@@ -35,6 +35,8 @@ This backlog preserves the extension's core constraint: one user action should p
 | OCVD-014 | P2 | Portable playback and HDR policy | Conditional |
 | OCVD-015 | P2 | Frame-aware deep detection | Conditional |
 | OCVD-016 | P2 | Expired signed-URL reacquisition | Conditional |
+| OCVD-017 | P2 | Auto-rename downloads from the page title/heading | Released |
+| OCVD-018 | P1 | Concurrent local downloads | Released |
 
 ## P0 — Reliability and control
 
@@ -465,6 +467,58 @@ This backlog preserves the extension's core constraint: one user action should p
 - [ ] No new candidate returns a concise timeout without leaving partial output.
 - [ ] Authentication failures never enter the normal network retry loop.
 - [ ] Candidates from another tab/frame/player cannot satisfy the refresh.
+
+## Implemented ergonomics
+
+### OCVD-017 — Auto-rename downloads from the page title/heading
+
+**Priority:** P2
+
+**Status:** Released; verified in Windows Chrome.
+
+**Outcome:** A saved file is named after what the user sees on the page, formatted as a clean kebab-case slug (a page whose `<h1>` is "Showcase Video" saves `showcase-video.mp4`).
+
+**Scope:**
+
+- Add a Unicode-aware `slugify()` to `extension/media.js`, kept separate from `sanitizeFilename` so the host's OS-safe-character pass and its tests are unchanged.
+- Default every download name to `slugify(document.title)` — no new permission and no page injection.
+- Optional **"Use page headings for filenames"** popup toggle reads the page `<h1>` through a one-shot, on-gesture `chrome.scripting.executeScript`. It requests the already-optional `scripting` permission on demand (mirroring deep detection) and is off by default, so the extension still injects nothing into pages unless the user opts in.
+- Fall back to the slugged tab title whenever the opt-in is off, scripting is not granted, or the page blocks injection (`chrome://`, PDF viewer, restricted/cross-origin).
+
+**Acceptance criteria:**
+
+- [x] `slugify` converts titles to kebab-case and is Unicode-aware (`tests/media.test.mjs`).
+- [x] `sanitizeFilename` behavior and its existing tests are unchanged.
+- [x] Manifest permissions are unchanged; `scripting` stays optional.
+- [x] With the opt-in enabled, a real page whose `<h1>` differs from `<title>` saves using the heading (Windows Chrome).
+- [x] A restricted page falls back to the slugged title without error (Windows Chrome).
+
+### OCVD-018 — Concurrent local downloads
+
+**Priority:** P1
+
+**Status:** Released; verified in Windows Chrome.
+
+**Outcome:** A download keeps running while the user navigates to another page/video and starts another, with live per-download feedback in the popup.
+
+**Why:** Single-job was enforced in the extension (`startDownload`), the popup (one progress card), and the native host (`JobRegistry`). The host already isolated each job behind its own `ProcessController`/thread keyed by job id, and wake locks were already reference-counted by id, so the work was removing the explicit guards and de-singletonizing the extension's job state.
+
+**Scope:**
+
+- Native host: replace the single-job guard with a bounded `MAX_CONCURRENT_JOBS` cap and reserve output filenames atomically so two same-title jobs never clobber each other.
+- Extension background: replace the singleton `jobState` with a `jobs` map keyed by id; route native and `chrome.downloads` events by id; persist/restore multiple jobs; mark each native job in error on host disconnect.
+- Dedupe by `(tab, hashed media URL)` so a double-click cannot start the same download twice; cap concurrent downloads (default 3).
+- Popup: render a live job list with per-row **Cancel/Stop and save**; keep **Download best quality** usable across tabs except when this tab's video is already downloading or the cap is reached.
+- Keep media URLs and request headers out of persisted job state (browser-fallback plans stay in memory only; dedupe keys hash the URL).
+
+**Acceptance criteria:**
+
+- [x] The native host runs multiple jobs concurrently, controls each independently, and rejects work beyond the cap (`tests/test_native_host.py`).
+- [x] Concurrent same-title jobs reserve distinct output paths.
+- [x] A canceled job still leaves the Downloads folder clean (existing test stays green).
+- [x] Persisted job state contains no media URLs, headers, or cookies.
+- [x] Two downloads started from different tabs both finish and show live progress (Windows Chrome).
+- [x] Closing and reopening the popup restores the live multi-job list (Windows Chrome).
 
 ## Recommended compatibility sequence
 

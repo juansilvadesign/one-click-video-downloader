@@ -193,6 +193,80 @@ class NativeHostUnitTests(unittest.TestCase):
             self.assertTrue(finished.wait(1))
         self.assertTrue(any(message.get("event") == "stopping" for message in messages))
 
+    def test_registry_controls_each_concurrent_job_independently(self):
+        entered = []
+        finished = set()
+        lock = threading.Lock()
+
+        def fake_execute(message, _send, controller):
+            with lock:
+                entered.append(message["id"])
+            while not controller.intent:
+                time.sleep(0.005)
+            with lock:
+                finished.add(message["id"])
+
+        def wait_until(predicate):
+            for _ in range(400):
+                if predicate():
+                    return True
+                time.sleep(0.005)
+            return False
+
+        registry = host.JobRegistry(lambda _message: None)
+        with mock.patch.object(host, "execute_job", side_effect=fake_execute):
+            registry.start({"id": "job-a", "job": {}})
+            registry.start({"id": "job-b", "job": {}})
+            self.assertTrue(wait_until(lambda: set(entered) == {"job-a", "job-b"}))
+            registry.control("job-a", "cancel")
+            self.assertTrue(wait_until(lambda: "job-a" in finished))
+            self.assertEqual(finished, {"job-a"})  # job-b keeps running independently
+            registry.control("job-b", "cancel")
+            registry.shutdown()
+        self.assertEqual(finished, {"job-a", "job-b"})
+
+    def test_registry_rejects_jobs_beyond_the_concurrency_cap(self):
+        entered = []
+        release = threading.Event()
+        lock = threading.Lock()
+
+        def fake_execute(message, _send, controller):
+            with lock:
+                entered.append(message["id"])
+            while not controller.intent and not release.is_set():
+                time.sleep(0.005)
+
+        registry = host.JobRegistry(lambda _message: None)
+        with mock.patch.object(host, "execute_job", side_effect=fake_execute):
+            try:
+                for index in range(host.MAX_CONCURRENT_JOBS):
+                    registry.start({"id": f"job-{index}", "job": {}})
+                for _ in range(400):
+                    if len(entered) == host.MAX_CONCURRENT_JOBS:
+                        break
+                    time.sleep(0.005)
+                self.assertEqual(len(entered), host.MAX_CONCURRENT_JOBS)
+                with self.assertRaisesRegex(host.HostError, "concurrent"):
+                    registry.start({"id": "job-overflow", "job": {}})
+            finally:
+                release.set()
+                registry.shutdown()
+        self.assertEqual(len(entered), host.MAX_CONCURRENT_JOBS)
+
+    def test_reserve_output_path_avoids_concurrent_name_collisions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first_path, first_release = host.reserve_output_path(root, "Showcase Video")
+            second_path, second_release = host.reserve_output_path(root, "Showcase Video")
+            self.assertEqual(first_path.name, "Showcase Video.mp4")
+            self.assertEqual(second_path.name, "Showcase Video (1).mp4")
+            first_release()
+            # Released and nothing written to disk -> the name frees up again.
+            third_path, third_release = host.reserve_output_path(root, "Showcase Video")
+            self.assertEqual(third_path.name, "Showcase Video.mp4")
+            second_release()
+            third_release()
+
     def test_force_termination_fallback_has_windows_and_posix_paths(self):
         class FakeProcess:
             pid = 42

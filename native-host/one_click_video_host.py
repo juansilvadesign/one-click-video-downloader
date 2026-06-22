@@ -29,6 +29,7 @@ ALLOWED_HEADERS = {"authorization", "cookie", "origin", "referer", "user-agent"}
 HTTP_RETRY_ATTEMPTS = 3
 PROBE_TIMEOUT_SECONDS = 25
 GRACEFUL_STOP_SECONDS = 5
+MAX_CONCURRENT_JOBS = 3
 MP4_VIDEO_COPY_CODECS = {"av1", "h264", "hevc", "mpeg4"}
 MP4_AUDIO_COPY_CODECS = {"aac", "mp3"}
 NETWORK_INPUT_OPTIONS = [
@@ -78,19 +79,59 @@ def download_directory() -> Path:
     return Path(configured).expanduser() if configured else Path.home() / "Downloads"
 
 
+_output_lock = threading.Lock()
+_reserved_outputs: set[Path] = set()
+
+
+def _output_name_collides(directory: Path, path: Path) -> bool:
+    partial_prefix = f"{path.stem}.part."
+    return path.exists() or any(item.name.startswith(partial_prefix) for item in directory.iterdir())
+
+
 def unique_output_path(directory: Path, title: str) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     stem = sanitize_filename(title)
     candidate = directory / f"{stem}.mp4"
     counter = 1
-    def collides(path: Path) -> bool:
-        partial_prefix = f"{path.stem}.part."
-        return path.exists() or any(item.name.startswith(partial_prefix) for item in directory.iterdir())
-
-    while collides(candidate):
+    while _output_name_collides(directory, candidate):
         candidate = directory / f"{stem} ({counter}).mp4"
         counter += 1
     return candidate
+
+
+def reserve_output_path(directory: Path, title: str) -> tuple[Path, Callable[[], None]]:
+    """Pick a unique final path and reserve it in memory until released.
+
+    Concurrent jobs share one host process, so an in-memory reservation closes
+    the window between choosing a name and writing the first file: two same-title
+    downloads resolve to different names instead of clobbering each other. No file
+    is created on disk, so a canceled job still leaves the Downloads folder clean.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    stem = sanitize_filename(title)
+    with _output_lock:
+        candidate = directory / f"{stem}.mp4"
+        counter = 1
+        while _output_name_collides(directory, candidate) or candidate in _reserved_outputs:
+            candidate = directory / f"{stem} ({counter}).mp4"
+            counter += 1
+        _reserved_outputs.add(candidate)
+    reserved = candidate
+
+    def release() -> None:
+        with _output_lock:
+            _reserved_outputs.discard(reserved)
+
+    return reserved, release
+
+
+@contextmanager
+def reserved_output_path(directory: Path, title: str) -> Iterator[Path]:
+    path, release = reserve_output_path(directory, title)
+    try:
+        yield path
+    finally:
+        release()
 
 
 def validated_url(value: str) -> str:
@@ -700,7 +741,7 @@ def execute_yt_dlp_job(
     job = message.get("job") or {}
     if not capabilities["ytDlp"]["available"]:
         raise HostError("yt-dlp fallback is not installed in the production .venv")
-    final_output = unique_output_path(download_directory(), job.get("title") or "video")
+    final_output, release_output = reserve_output_path(download_directory(), job.get("title") or "video")
     output_template = final_output.with_name(f"{final_output.stem}.part.%(ext)s")
     cookie_path: Path | None = None
     if job.get("cookies"):
@@ -753,6 +794,7 @@ def execute_yt_dlp_job(
     finally:
         if cookie_path:
             _remove_ephemeral(cookie_path)
+        release_output()
 
 
 def _ffmpeg_detail(codec_plan: dict, live: bool) -> str:
@@ -783,10 +825,9 @@ def execute_job(
 
     ffmpeg = capabilities["ffmpeg"]["path"]
     ffprobe = capabilities["ffprobe"]["path"]
-    final_output = unique_output_path(download_directory(), job.get("title") or "video")
-    temporary_output = final_output.with_name(f"{final_output.stem}.part.mp4")
-
-    with prepared_job_inputs(job) as prepared_job:
+    with reserved_output_path(download_directory(), job.get("title") or "video") as final_output, \
+            prepared_job_inputs(job) as prepared_job:
+        temporary_output = final_output.with_name(f"{final_output.stem}.part.mp4")
         inputs = prepared_job.get("inputs") or []
         metadata = [probe_media(ffprobe, media_input) for media_input in inputs[:2]]
         duration = metadata_duration(metadata[0]) if metadata else None
@@ -888,8 +929,8 @@ class JobRegistry:
         with self._lock:
             if job_id in self._jobs:
                 raise HostError("A job with this ID is already active")
-            if self._jobs:
-                raise HostError("Another native media job is already active")
+            if len(self._jobs) >= MAX_CONCURRENT_JOBS:
+                raise HostError("Too many concurrent downloads are already active")
             controller = ProcessController(job_id)
             thread = threading.Thread(
                 target=self._worker,

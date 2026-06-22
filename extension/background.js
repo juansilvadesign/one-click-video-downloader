@@ -3,15 +3,18 @@ import {
   classifyMedia,
   normalizeContentType,
   qualityHint,
-  sanitizeFilename
+  slugify
 } from "./media.js";
 import { PowerLeaseManager } from "./power.js";
 
 const HOST_NAME = "io.local.one_click_video_downloader";
 const MEDIA_STORAGE_KEY = "mediaByTab";
-const JOB_STORAGE_KEY = "jobState";
+const JOB_STORAGE_KEY = "jobs";
+const HEADING_PREF_KEY = "useHeadingForName";
 const MAX_CANDIDATES_PER_TAB = 100;
 const MAX_INLINE_MANIFEST_BYTES = 2 * 1024 * 1024;
+const MAX_CONCURRENT_JOBS = 3;
+const MAX_FINISHED_JOBS = 6;
 const ACTIVE_JOB_STATES = new Set(["running", "recording", "retrying", "stopping"]);
 const ALLOWED_REQUEST_HEADERS = new Set([
   "authorization",
@@ -28,8 +31,12 @@ const storageArea = chrome.storage.session || chrome.storage.local;
 let nativePort = null;
 let hostPingId = null;
 let hostState = { status: "unknown", message: "Native host not checked", capabilities: null };
-let jobState = { status: "idle" };
-let browserFallback = null;
+// One entry per download, keyed by job id, so several can run at once.
+const jobs = new Map();
+// Browser-download fallback plans carry media URLs + headers, so they stay in
+// memory only and are never persisted — preserving the original redaction posture.
+const browserFallbacks = new Map();
+let useHeadingForName = false;
 
 const wakeLocks = new PowerLeaseManager({
   hasPermission: () => chrome.permissions.contains({ permissions: ["power"] }),
@@ -40,21 +47,24 @@ const wakeLocks = new PowerLeaseManager({
 const ready = restoreState();
 
 async function restoreState() {
-  const stored = await storageArea.get([MEDIA_STORAGE_KEY, JOB_STORAGE_KEY]);
+  const stored = await storageArea.get([MEDIA_STORAGE_KEY, JOB_STORAGE_KEY, HEADING_PREF_KEY]);
   for (const [tabId, candidates] of Object.entries(stored[MEDIA_STORAGE_KEY] || {})) {
     mediaByTab.set(Number(tabId), candidates);
     await updateBadge(Number(tabId));
   }
-  const restoredJob = stored[JOB_STORAGE_KEY];
-  if (restoredJob && ACTIVE_JOB_STATES.has(restoredJob.status)) {
-    jobState = {
-      status: "error",
-      error: "The previous local job disconnected when the extension worker restarted."
-    };
-    await persistJob();
-  } else if (restoredJob) {
-    jobState = restoredJob;
+  for (const job of stored[JOB_STORAGE_KEY] || []) {
+    if (!job?.id) continue;
+    jobs.set(job.id, ACTIVE_JOB_STATES.has(job.status)
+      ? {
+          ...job,
+          status: "error",
+          error: "The previous local job disconnected when the extension worker restarted.",
+          finishedAt: Date.now()
+        }
+      : job);
   }
+  useHeadingForName = Boolean(stored[HEADING_PREF_KEY]);
+  await persistJobs();
   const hasPower = await chrome.permissions.contains({ permissions: ["power"] });
   if (hasPower) chrome.power.releaseKeepAwake();
 }
@@ -63,13 +73,61 @@ async function persistMedia() {
   await storageArea.set({ [MEDIA_STORAGE_KEY]: Object.fromEntries(mediaByTab) });
 }
 
-async function persistJob() {
-  await storageArea.set({ [JOB_STORAGE_KEY]: jobState });
+async function persistJobs() {
+  await storageArea.set({ [JOB_STORAGE_KEY]: [...jobs.values()] });
 }
 
-function setJobState(next) {
-  jobState = next;
-  void persistJob();
+function setJob(id, entry) {
+  jobs.set(id, entry);
+  void persistJobs();
+}
+
+function patchJob(id, patch) {
+  const current = jobs.get(id);
+  if (!current) return null;
+  const next = { ...current, ...patch };
+  jobs.set(id, next);
+  void persistJobs();
+  return next;
+}
+
+function activeJobs() {
+  return [...jobs.values()].filter((job) => ACTIVE_JOB_STATES.has(job.status));
+}
+
+function hasActiveDuplicate(dedupeKey) {
+  return [...jobs.values()].some(
+    (job) => job.dedupeKey === dedupeKey && ACTIVE_JOB_STATES.has(job.status)
+  );
+}
+
+// Project a job to a popup-safe view: no media URLs, headers, cookies, or fallback plan.
+function jobView(job) {
+  return {
+    id: job.id,
+    status: job.status,
+    mode: job.mode,
+    tabId: job.tabId,
+    title: job.title,
+    label: job.label,
+    progress: Number.isFinite(job.progress) ? job.progress : null,
+    detail: job.detail || "",
+    live: Boolean(job.live),
+    stopped: Boolean(job.stopped),
+    output: job.output || "",
+    error: job.error || ""
+  };
+}
+
+// Keep all active jobs plus the most recent finished ones so the list stays bounded.
+function pruneJobs() {
+  const finished = [...jobs.values()].filter((job) => !ACTIVE_JOB_STATES.has(job.status));
+  if (finished.length <= MAX_FINISHED_JOBS) return;
+  finished
+    .sort((a, b) => (a.finishedAt || 0) - (b.finishedAt || 0))
+    .slice(0, finished.length - MAX_FINISHED_JOBS)
+    .forEach((job) => jobs.delete(job.id));
+  void persistJobs();
 }
 
 function headerValue(headers = [], name) {
@@ -231,10 +289,13 @@ function connectNativeHost() {
       const message = chrome.runtime.lastError?.message || "Native host disconnected";
       nativePort = null;
       hostState = { status: "unavailable", message, capabilities: null };
-      if (jobState.mode === "native" && ACTIVE_JOB_STATES.has(jobState.status)) {
-        void wakeLocks.release(jobState.id);
-        setJobState({ ...jobState, status: "error", error: message });
+      for (const job of jobs.values()) {
+        if (job.mode === "native" && ACTIVE_JOB_STATES.has(job.status)) {
+          void wakeLocks.release(job.id);
+          patchJob(job.id, { status: "error", error: message, finishedAt: Date.now() });
+        }
       }
+      pruneJobs();
       broadcast({ type: "stateUpdated" });
     });
     hostPingId = crypto.randomUUID();
@@ -261,48 +322,54 @@ function handleNativeMessage(message) {
     broadcast({ type: "stateUpdated" });
     return;
   }
-  if (jobState.id && message.id !== jobState.id) return;
+  const job = jobs.get(message.id);
+  if (!job) return;
 
   if (message.event === "started") {
-    setJobState({
-      ...jobState,
+    patchJob(message.id, {
       status: message.live ? "recording" : "running",
       live: Boolean(message.live),
       detail: message.detail || "Processing locally"
     });
   } else if (message.event === "progress") {
-    const status = jobState.status === "stopping"
+    const status = job.status === "stopping"
       ? "stopping"
-      : jobState.live ? "recording" : "running";
-    setJobState({
-      ...jobState,
+      : job.live ? "recording" : "running";
+    patchJob(message.id, {
       status,
-      progress: message.progress ?? jobState.progress ?? null,
+      progress: message.progress ?? job.progress ?? null,
       detail: message.detail || "Processing locally"
     });
   } else if (message.event === "retrying") {
-    setJobState({
-      ...jobState,
+    patchJob(message.id, {
       status: "retrying",
       retryAttempt: message.attempt,
       detail: message.detail || "Retrying a temporary failure"
     });
   } else if (message.event === "stopping") {
-    setJobState({ ...jobState, status: "stopping", detail: message.detail || "Stopping" });
+    patchJob(message.id, { status: "stopping", detail: message.detail || "Stopping" });
   } else if (message.event === "canceled") {
     void wakeLocks.release(message.id);
-    setJobState({ status: "canceled", mode: "native", detail: "Download canceled" });
+    patchJob(message.id, { status: "canceled", detail: "Download canceled", finishedAt: Date.now() });
+    pruneJobs();
   } else if (message.event === "complete") {
     void wakeLocks.release(message.id);
-    setJobState({
+    patchJob(message.id, {
       status: "complete",
       output: message.output,
       progress: 100,
-      stopped: Boolean(message.stopped)
+      stopped: Boolean(message.stopped),
+      finishedAt: Date.now()
     });
+    pruneJobs();
   } else if (message.event === "error") {
     void wakeLocks.release(message.id);
-    setJobState({ status: "error", error: message.error || "Local processing failed" });
+    patchJob(message.id, {
+      status: "error",
+      error: message.error || "Local processing failed",
+      finishedAt: Date.now()
+    });
+    pruneJobs();
   }
   broadcast({ type: "stateUpdated" });
 }
@@ -319,9 +386,51 @@ function canUsePageFallback(tab) {
   );
 }
 
+async function headingNamingEnabled() {
+  if (!useHeadingForName) return false;
+  return chrome.permissions.contains({ permissions: ["scripting"] });
+}
+
+// One-shot read of the page <h1> on the active download gesture. Only runs when the
+// user opted in and granted scripting; any blocked page (chrome://, PDF, restricted)
+// returns "" so the caller falls back to the tab title.
+async function readPageHeading(tabId) {
+  try {
+    const [injection] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        const heading = document.querySelector("h1")?.innerText?.trim();
+        return heading || document.title || "";
+      }
+    });
+    return String(injection?.result || "").slice(0, 300);
+  } catch {
+    return "";
+  }
+}
+
+async function resolveTitle(tabId, tab, plan) {
+  const base = plan?.inputs?.[0]?.pageTitle || tab?.title || "video";
+  const heading = (await headingNamingEnabled()) ? await readPageHeading(tabId) : "";
+  return slugify(heading || base, "video");
+}
+
+async function setHeadingPreference(enabled) {
+  if (enabled) {
+    const granted = await chrome.permissions.contains({ permissions: ["scripting"] });
+    if (!granted) throw new Error("Scripting permission is required to read page headings");
+  }
+  useHeadingForName = enabled;
+  await storageArea.set({ [HEADING_PREF_KEY]: enabled });
+  broadcast({ type: "stateUpdated" });
+  return { ok: true, useHeadingForName };
+}
+
 async function startDownload(tabId, { useCookies = false } = {}) {
   await ready;
-  if (ACTIVE_JOB_STATES.has(jobState.status)) throw new Error("Another download is already active");
+  if (activeJobs().length >= MAX_CONCURRENT_JOBS) {
+    throw new Error(`Too many downloads are active (max ${MAX_CONCURRENT_JOBS}). Wait for one to finish.`);
+  }
   const candidates = mediaByTab.get(tabId) || [];
   const plan = chooseDownloadPlan(candidates);
   const tab = await chrome.tabs.get(tabId);
@@ -332,21 +441,26 @@ async function startDownload(tabId, { useCookies = false } = {}) {
         ? "This page cannot be passed to the local extractor"
         : "No video was detected. Play it first, enable deep detection, or install yt-dlp fallback.");
     }
+    const dedupeKey = `${tabId}:page:${scriptHash(tab.url)}`;
+    if (hasActiveDuplicate(dedupeKey)) throw new Error("This page is already downloading");
     let cookies = [];
     if (useCookies) {
       const allowed = await chrome.permissions.contains({ permissions: ["cookies"] });
       if (!allowed) throw new Error("Cookie access was not granted");
       cookies = await chrome.cookies.getAll({ url: tab.url });
     }
-    return startNativeJob({
-      mode: "page",
-      pageUrl: tab.url,
-      cookies,
-      userAgent: navigator.userAgent
-    }, sanitizeFilename(tab.title, "video"));
+    const title = await resolveTitle(tabId, tab, null);
+    return startNativeJob(
+      { mode: "page", pageUrl: tab.url, cookies, userAgent: navigator.userAgent },
+      title,
+      { tabId, dedupeKey, label: "Page extractor" }
+    );
   }
 
-  const title = sanitizeFilename(plan.inputs[0]?.pageTitle || tab.title, "video");
+  const dedupeKey = `${tabId}:${scriptHash(plan.inputs[0]?.url || "")}`;
+  if (hasActiveDuplicate(dedupeKey)) throw new Error("This video is already downloading");
+  const title = await resolveTitle(tabId, tab, plan);
+
   if (plan.mode === "direct") {
     try {
       const downloadId = await chrome.downloads.download({
@@ -355,27 +469,46 @@ async function startDownload(tabId, { useCookies = false } = {}) {
         saveAs: false,
         conflictAction: "uniquify"
       });
-      browserFallback = { plan, title };
-      setJobState({
+      const id = crypto.randomUUID();
+      browserFallbacks.set(id, { plan, title });
+      setJob(id, {
+        id,
         status: "running",
         mode: "browser",
+        tabId,
+        title,
+        label: plan.label,
+        dedupeKey,
         downloadId,
-        detail: "Downloading MP4"
+        progress: null,
+        detail: "Downloading MP4",
+        createdAt: Date.now()
       });
       broadcast({ type: "stateUpdated" });
-      return jobState;
+      return jobView(jobs.get(id));
     } catch {
-      return startNativeJob({ ...plan, mode: "direct" }, title);
+      return startNativeJob({ ...plan, mode: "direct" }, title, { tabId, dedupeKey, label: plan.label });
     }
   }
-  return startNativeJob(plan, title);
+  return startNativeJob(plan, title, { tabId, dedupeKey, label: plan.label });
 }
 
-async function startNativeJob(plan, title) {
+async function startNativeJob(plan, title, { tabId, dedupeKey, label }) {
   const port = connectNativeHost();
   if (!port) throw new Error(hostState.message);
   const id = crypto.randomUUID();
-  setJobState({ status: "running", mode: "native", id, progress: null, detail: "Starting local job" });
+  setJob(id, {
+    id,
+    status: "running",
+    mode: "native",
+    tabId,
+    title,
+    label: label || "Local job",
+    dedupeKey,
+    progress: null,
+    detail: "Starting local job",
+    createdAt: Date.now()
+  });
   const job = plan.mode === "page"
     ? {
         kind: "page",
@@ -399,50 +532,61 @@ async function startNativeJob(plan, title) {
     await wakeLocks.acquire(id);
   } catch (error) {
     await wakeLocks.release(id);
-    setJobState({ status: "error", error: error.message });
+    patchJob(id, { status: "error", error: error.message, finishedAt: Date.now() });
     throw error;
   }
   broadcast({ type: "stateUpdated" });
-  return jobState;
+  return jobView(jobs.get(id));
 }
 
 chrome.downloads.onChanged.addListener((delta) => {
-  if (jobState.mode !== "browser" || delta.id !== jobState.downloadId || jobState.status === "canceled") return;
+  const job = [...jobs.values()].find((entry) => entry.mode === "browser" && entry.downloadId === delta.id);
+  if (!job || job.status === "canceled") return;
   if (delta.state?.current === "complete") {
-    browserFallback = null;
-    setJobState({ ...jobState, status: "complete", progress: 100 });
+    browserFallbacks.delete(job.id);
+    patchJob(job.id, { status: "complete", progress: 100, finishedAt: Date.now() });
+    pruneJobs();
   } else if (delta.error?.current) {
-    const fallback = browserFallback;
-    browserFallback = null;
+    const fallback = browserFallbacks.get(job.id);
+    browserFallbacks.delete(job.id);
     if (delta.error.current !== "USER_CANCELED" && fallback) {
-      void startNativeJob(fallback.plan, fallback.title).catch((error) => {
-        setJobState({ status: "error", error: error.message });
+      jobs.delete(job.id);
+      void persistJobs();
+      void startNativeJob(fallback.plan, fallback.title, {
+        tabId: job.tabId,
+        dedupeKey: job.dedupeKey,
+        label: job.label
+      }).catch((error) => {
+        setJob(job.id, { ...job, status: "error", error: error.message, finishedAt: Date.now() });
         broadcast({ type: "stateUpdated" });
       });
       return;
     }
-    setJobState(delta.error.current === "USER_CANCELED"
-      ? { status: "canceled", detail: "Download canceled" }
-      : { status: "error", error: delta.error.current });
+    patchJob(job.id, delta.error.current === "USER_CANCELED"
+      ? { status: "canceled", detail: "Download canceled", finishedAt: Date.now() }
+      : { status: "error", error: delta.error.current, finishedAt: Date.now() });
+    pruneJobs();
   }
   broadcast({ type: "stateUpdated" });
 });
 
-async function cancelCurrentJob() {
+async function cancelJob(jobId) {
   await ready;
-  if (!ACTIVE_JOB_STATES.has(jobState.status)) throw new Error("No active download to stop");
-  if (jobState.mode === "browser") {
-    await chrome.downloads.cancel(jobState.downloadId);
-    browserFallback = null;
-    setJobState({ status: "canceled", detail: "Download canceled" });
-  } else if (jobState.mode === "native" && nativePort) {
-    nativePort.postMessage({ action: jobState.live ? "stop" : "cancel", id: jobState.id });
-    setJobState({ ...jobState, status: "stopping", detail: jobState.live ? "Stopping and finalizing" : "Canceling" });
+  const job = jobs.get(jobId);
+  if (!job || !ACTIVE_JOB_STATES.has(job.status)) throw new Error("No active download to stop");
+  if (job.mode === "browser") {
+    browserFallbacks.delete(jobId);
+    await chrome.downloads.cancel(job.downloadId);
+    patchJob(jobId, { status: "canceled", detail: "Download canceled", finishedAt: Date.now() });
+    pruneJobs();
+  } else if (job.mode === "native" && nativePort) {
+    nativePort.postMessage({ action: job.live ? "stop" : "cancel", id: jobId });
+    patchJob(jobId, { status: "stopping", detail: job.live ? "Stopping and finalizing" : "Canceling" });
   } else {
     throw new Error("The native job is no longer connected");
   }
   broadcast({ type: "stateUpdated" });
-  return jobState;
+  return jobView(jobs.get(jobId));
 }
 
 function scriptHash(value) {
@@ -515,15 +659,23 @@ async function stateFor(tabId) {
   const detectedPlan = chooseDownloadPlan(candidates);
   const tab = await chrome.tabs.get(tabId).catch(() => null);
   const pageFallback = !detectedPlan && canUsePageFallback(tab);
+  const dedupeKey = detectedPlan
+    ? `${tabId}:${scriptHash(detectedPlan.inputs[0]?.url || "")}`
+    : pageFallback ? `${tabId}:page:${scriptHash(tab?.url || "")}` : "";
   return {
     candidateCount: candidates.length,
     plan: detectedPlan
       ? { mode: detectedPlan.mode, label: detectedPlan.label }
       : pageFallback ? { mode: "page", label: "Page extractor fallback" } : null,
     host: hostState,
-    job: jobState,
+    jobs: [...jobs.values()].map(jobView),
+    activeCount: activeJobs().length,
+    maxConcurrent: MAX_CONCURRENT_JOBS,
+    tabDownloading: dedupeKey ? hasActiveDuplicate(dedupeKey) : false,
     pageFallback,
-    deepDetectionEnabled: await deepDetectionEnabled(tab)
+    deepDetectionEnabled: await deepDetectionEnabled(tab),
+    useHeadingForName,
+    headingPermission: await chrome.permissions.contains({ permissions: ["scripting"] })
   };
 }
 
@@ -534,13 +686,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message?.type === "downloadBest") {
     operation = startDownload(message.tabId, { useCookies: Boolean(message.useCookies) });
   } else if (message?.type === "cancelJob") {
-    operation = cancelCurrentJob();
+    operation = cancelJob(message.jobId);
   } else if (message?.type === "clearTab") {
     operation = clearTab(message.tabId).then(() => ({ ok: true }));
   } else if (message?.type === "enableDeepDetection") {
     operation = enableDeepDetection(message.tabId);
   } else if (message?.type === "inlineManifestDetected") {
     operation = captureInlineManifest(message, sender);
+  } else if (message?.type === "setHeadingPreference") {
+    operation = setHeadingPreference(Boolean(message.enabled));
   } else {
     operation = Promise.reject(new Error("Unknown extension message"));
   }

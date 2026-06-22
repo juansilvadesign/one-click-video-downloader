@@ -36,6 +36,8 @@ The identity combines the page-video frame, play symbol, download action, and cu
 - Optional pinned yt-dlp page fallback when normal request detection finds nothing.
 - Optional per-site HLS Blob detection for manifests created entirely in page memory.
 - Optional system wake lock while native processing is active.
+- Automatic kebab-case filenames from the page title (e.g. `showcase-video.mp4`), with an optional page-heading naming mode.
+- Up to three downloads at once, each with its own live progress; downloads keep running in the background if the popup closes.
 
 DRM bypass, credential automation, batch download, and site-specific extractors are explicitly outside this project.
 
@@ -254,6 +256,10 @@ Run the uninstall command with Windows Python when unregistering Windows Chrome.
 5. Keep the source tab open while authenticated media is processed.
 
 Direct MP4 files use the browser downloader. Adaptive, split, and page-fallback jobs continue through the native host if the popup closes; reopening it restores the current job state. Use **Cancel download** for finite work or **Stop and save** for a live recording.
+
+Files are named after the page title as a kebab-case slug (for example `showcase-video.mp4`). Enable **Use page headings for filenames** in the popup to name files from the page's on-screen `<h1>` instead; this asks for the optional `scripting` permission and falls back to the title on pages where it cannot read the heading.
+
+You can run several downloads at once (up to three). Start one, switch to another tab or video, and start another; each shows its own live progress in the popup, and downloads keep running in the background if you close it.
 
 ## Verification
 
