@@ -175,9 +175,13 @@ hyperframes/readme-showcase/
 Published assets:
 
 ```text
-assets/showcase/one-click-video-downloader-showcase.mp4
-assets/showcase/one-click-video-downloader-showcase-poster.png
+assets/showcase/one-click-video-downloader-showcase.webp          (README hero — autoplay, looping)
+assets/showcase/one-click-video-downloader-showcase-edited.mp4    (edited ~9.3 s cut; WebP source)
+assets/showcase/one-click-video-downloader-showcase.mp4           (full 12 s render; source/fallback)
+assets/showcase/one-click-video-downloader-showcase-poster.png    (poster frame; source/fallback)
 ```
+
+The README embeds the animated WebP directly because GitHub cannot autoplay a real video; the MP4s and poster are kept as source/fallback.
 
 Brand assets:
 
@@ -203,6 +207,19 @@ npx --yes hyperframes@0.6.51 render --quality draft --workers 1 \
 ```
 
 After rendering, use ffprobe to confirm H.264, 1920×1080, 30 fps, 12 seconds, and `yuv420p`. Extract the poster from approximately 10.8 seconds. Visually inspect representative frames; automated layout checks cannot judge semantic alignment or logo contrast.
+
+The README hero is an autoplaying, looping animated WebP (GitHub cannot autoplay a real video). Regenerate it from the edited cut:
+
+```bash
+cd assets/showcase
+ffmpeg -y -i one-click-video-downloader-showcase-edited.mp4 \
+  -an -vcodec libwebp -loop 0 \
+  -vf "fps=18,scale=1280:-1:flags=lanczos" \
+  -lossless 0 -q:v 55 -compression_level 6 \
+  one-click-video-downloader-showcase.webp
+```
+
+`-loop 0` loops forever; `fps`/`scale`/`-q:v` trade size against quality. ffprobe and ffmpeg cannot read animated WebP, so confirm the animation structurally with `grep -a -o ANMF one-click-video-downloader-showcase.webp | wc -l` (one match per frame).
 
 Known non-blocking tooling behavior:
 

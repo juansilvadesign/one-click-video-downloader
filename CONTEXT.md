@@ -221,15 +221,17 @@ npm test
 
 ## 9. Brand and README showcase
 
-The README uses a clickable poster linked to a silent 12-second H.264 showcase.
+The README embeds an autoplaying, looping animated WebP. GitHub cannot autoplay a real video, so the hero is an image (WebP), not an MP4. It is derived from an edited (~9.3-second) cut of the silent H.264 showcase; the full 12-second MP4 and its poster are kept as source/fallback assets.
 
 | Path | Purpose |
 |---|---|
 | `assets/logo/brand.png` | Full brand board |
 | `assets/logo/profile-nobg.svg` | Standard multicolor mark |
 | `assets/logo/profile-white.svg` | All-white mark for saturated backgrounds |
-| `assets/showcase/one-click-video-downloader-showcase.mp4` | Published README showcase |
-| `assets/showcase/one-click-video-downloader-showcase-poster.png` | README hero/poster |
+| `assets/showcase/one-click-video-downloader-showcase.webp` | README hero — autoplaying, looping animated WebP |
+| `assets/showcase/one-click-video-downloader-showcase-edited.mp4` | Edited (~9.3 s) cut; source for the WebP |
+| `assets/showcase/one-click-video-downloader-showcase.mp4` | Full 12-second H.264 render (source/fallback) |
+| `assets/showcase/one-click-video-downloader-showcase-poster.png` | Poster frame (source/fallback) |
 | `hyperframes/readme-showcase/` | Editable Hyperframes source and local render assets |
 
 The composition is 1920×1080, 30 fps, 12 seconds, silent, and pinned to Hyperframes `0.6.51`. Its four beats are brand hook, automatic detection, local FFmpeg merge, and saved MP4. Use the multicolor logo on light surfaces and the white variant inside saturated blue processor states. Functional UI outlines should stay level and centered unless rotation has semantic value.
