@@ -1,7 +1,7 @@
 # One-Click Video Downloader Backlog
 
-**Last reviewed:** 2026-06-19  
-**Current release:** `0.2.0` implemented; Windows Chrome smoke verification pending
+**Last reviewed:** 2026-06-22  
+**Current release:** `0.2.0` released and manually verified in Windows Chrome
 
 This backlog preserves the extension's core constraint: one user action should produce one local video without exposing manifests, fragments, codecs, or downloader-engine choices during the normal path.
 
@@ -19,12 +19,22 @@ This backlog preserves the extension's core constraint: one user action should p
 
 | ID | Priority | Item | Status |
 |---|---|---|---|
-| OCVD-001 | P0 | Controllable native jobs and live-stream mode | Implemented; desktop smoke pending |
-| OCVD-002 | P0 | Network resilience and dependency preflight | Implemented; desktop smoke pending |
-| OCVD-003 | P1 | Codec-aware selective transcoding | Implemented; desktop smoke pending |
-| OCVD-004 | P1 | Optional yt-dlp page fallback | Implemented; extractor/browser smoke pending |
-| OCVD-005 | P2 | In-memory HLS manifest detection | Implemented as opt-in; browser fixture pending |
-| OCVD-006 | P2 | Prevent system sleep during native jobs | Implemented; browser verification pending |
+| OCVD-001 | P0 | Controllable native jobs and live-stream mode | Released |
+| OCVD-002 | P0 | Network resilience and dependency preflight | Released |
+| OCVD-003 | P1 | Codec-aware selective transcoding | Released |
+| OCVD-004 | P1 | Optional yt-dlp page fallback | Released; extractor fixture pending |
+| OCVD-005 | P2 | In-memory HLS manifest detection | Released as opt-in; real Blob site pending |
+| OCVD-006 | P2 | Prevent system sleep during native jobs | Released |
+| OCVD-007 | P0 | Correct Chrome lifecycle compatibility floor | Planned |
+| OCVD-008 | P0 | Document-scoped candidate selection | Planned |
+| OCVD-009 | P0 | FFmpeg protocol capability negotiation | Planned |
+| OCVD-010 | P1 | Ambiguous media-response detection | Planned |
+| OCVD-011 | P1 | Default audio and language-aware selection | Planned |
+| OCVD-012 | P0 | Local browser compatibility fixture site | Planned |
+| OCVD-013 | P1 | Explicit yt-dlp compatibility lifecycle | Planned |
+| OCVD-014 | P2 | Portable playback and HDR policy | Conditional |
+| OCVD-015 | P2 | Frame-aware deep detection | Conditional |
+| OCVD-016 | P2 | Expired signed-URL reacquisition | Conditional |
 
 ## P0 — Reliability and control
 
@@ -206,6 +216,264 @@ This backlog preserves the extension's core constraint: one user action should p
 
 - [Live Stream Downloader power lifecycle](../../sources/video-downloader-extension/live-stream-downloader/v3/worker.js)
 
+## Planned compatibility work
+
+### OCVD-007 — Correct Chrome lifecycle compatibility floor
+
+**Priority:** P0
+
+**Outcome:** Every supported Chrome/Edge version keeps the Manifest V3 worker alive for the complete Native Messaging job.
+
+**Why:** The manifest currently allows Chrome 102. Chrome only guarantees that `runtime.connectNative()` keeps an extension service worker alive from Chrome 105 onward. Document-scoped request IDs used by OCVD-008 are available from Chrome 106, so `106` is the honest minimum for the planned compatibility baseline.
+
+**Scope:**
+
+- Raise `minimum_chrome_version` to `106` and document the equivalent Edge requirement.
+- Add a manifest test that rejects a lower compatibility floor.
+- Add a browser-fixture job lasting longer than the normal service-worker idle timeout.
+- Verify popup close/reopen while that native job remains active.
+- Do not add timer-based keepalive traffic.
+
+**Acceptance criteria:**
+
+- [ ] Chrome/Edge below the declared floor cannot install the release.
+- [ ] A native job longer than 30 seconds stays connected without artificial polling.
+- [ ] Closing the popup does not affect the worker/native-host connection.
+- [ ] Reopening the popup restores the same job ID and visible state.
+
+**Reference:** [Chrome extension service-worker lifecycle](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle)
+
+### OCVD-008 — Document-scoped candidate selection
+
+**Priority:** P0
+
+**Outcome:** Single-page navigation, advertisements, iframes, and multiple players cannot cause the extension to download or merge media from the wrong playback session.
+
+**Why:** Candidates currently live at tab scope. SPA URL changes may not emit the exact `status: loading` combination used to clear state, and split-track pairing accepts any video/audio detected within two minutes. That can retain the previous route's video or pair tracks from unrelated players.
+
+**Scope:**
+
+- Store `documentId`, `frameId`, initiator, top-level URL, and navigation generation with each candidate.
+- Clear or retire candidates on every top-level URL/document transition, including History API navigation.
+- Group candidates by document/frame/playback session before choosing a plan.
+- Never pair separate video/audio candidates across document or frame boundaries.
+- Prefer the most recently active compatible group; retain the one-click UI.
+- Define an explicit fallback for events where `documentId` is unavailable.
+
+**Acceptance criteria:**
+
+- [ ] Navigating between two SPA videos never offers media from the previous route.
+- [ ] An advertisement manifest cannot outrank the subsequently played main video solely because its URL contains `master`.
+- [ ] Two simultaneous players remain separate candidate groups.
+- [ ] Video and audio from different frames are never merged.
+- [ ] Tests cover reload, History API navigation, iframe playback, and ad-before-content ordering.
+
+**Reference:** [Chrome `webRequest` request lifecycle](https://developer.chrome.com/docs/extensions/reference/api/webRequest)
+
+### OCVD-009 — FFmpeg protocol capability negotiation
+
+**Priority:** P0
+
+**Outcome:** Supported FFmpeg builds receive only HTTP/reconnect flags they actually understand.
+
+**Why:** Network arguments are currently hard-coded. FFmpeg protocol options vary by build and version, so an otherwise usable installation can fail immediately with “Option not found.”
+
+**Scope:**
+
+- Inspect `ffmpeg -h protocol=http` during readiness and cache supported option names.
+- Build HTTP input arguments from detected capabilities instead of a fixed list.
+- Preserve bounded application-level retries when newer FFmpeg retry flags are unavailable.
+- Report degraded network resilience as a capability warning, not an opaque job failure.
+- Establish and document the oldest FFmpeg version/build profile covered by tests.
+- Keep every subprocess invocation as an argument array.
+
+**Acceptance criteria:**
+
+- [ ] Unsupported protocol flags are omitted automatically.
+- [ ] Current FFmpeg builds use bounded retry-count and total-delay options when available.
+- [ ] Older supported profiles still download using application-level retry.
+- [ ] Missing essential HTTP support fails during readiness with an actionable message.
+- [ ] Mocked legacy/current capability outputs and a real installed build are covered.
+
+**Reference:** [FFmpeg HTTP and reconnect protocol options](https://ffmpeg.org/ffmpeg-protocols.html#http)
+
+### OCVD-010 — Ambiguous media-response detection
+
+**Priority:** P1
+
+**Outcome:** Direct media served through XHR/fetch or generic MIME types is detected without turning arbitrary large downloads into video candidates.
+
+**Why:** URL-based MP4/WebM detection currently requires `requestType === "media"`. Players often fetch media as `xmlhttprequest` or return `application/octet-stream`, while signed URLs may have no media extension.
+
+**Scope:**
+
+- Parse `Content-Disposition` filenames and retain response range metadata.
+- Add confidence scoring for generic MIME types using multiple signals: filename/URL extension, `Content-Range`, large content length, media initiator, and request type.
+- Recognize conventional MP4/WebM/QuickTime response aliases.
+- Keep transport fragments, HTML, JSON, archives, and small binary responses excluded.
+- Do not inspect or copy response bodies.
+- Surface the detection reason only in sanitized diagnostics/tests, not the normal popup.
+
+**Acceptance criteria:**
+
+- [ ] An MP4 returned as `application/octet-stream` through XHR is detected when range/filename evidence agrees.
+- [ ] An extensionless response with `Content-Disposition: ...filename="video.mp4"` is detected.
+- [ ] Large ZIP, JSON, HTML, and generic API responses remain excluded.
+- [ ] TS/m4s/CMAF fragments remain excluded from direct-file plans.
+- [ ] Confidence thresholds are covered with positive and negative fixtures.
+
+**Reference:** [Chrome `webRequest.onHeadersReceived`](https://developer.chrome.com/docs/extensions/reference/api/webRequest#event-onHeadersReceived)
+
+### OCVD-011 — Default audio and language-aware selection
+
+**Priority:** P1
+
+**Outcome:** Multi-language HLS/DASH downloads select the intended primary audio instead of whichever track has the most channels.
+
+**Why:** FFmpeg's automatic audio choice favors channel count. A commentary track or unrelated language can therefore outrank the manifest's default track.
+
+**Scope:**
+
+- Extend ffprobe metadata with stream index, disposition, language, title, and role tags.
+- Select audio in this order: manifest/default disposition, browser language match, non-commentary main role, then channel count/bitrate.
+- Pass `navigator.languages` as preference context without adding a normal-path setting.
+- Map the chosen stream explicitly while preserving highest-resolution compatible video.
+- Fall back deterministically when metadata is absent or contradictory.
+
+**Acceptance criteria:**
+
+- [ ] A marked default audio track wins over a higher-channel commentary track.
+- [ ] When no default exists, the first browser-language match wins.
+- [ ] Commentary/descriptive roles do not win unless they are the only audio available.
+- [ ] Single-audio manifests behave exactly as before.
+- [ ] HLS and DASH fixtures cover Portuguese/English and commentary variants.
+
+**Reference:** [FFmpeg automatic and manual stream selection](https://ffmpeg.org/ffmpeg.html#Stream-selection)
+
+### OCVD-012 — Local browser compatibility fixture site
+
+**Priority:** P0
+
+**Outcome:** Compatibility changes are reproduced end to end in Chrome without depending on third-party sites, accounts, or expiring URLs.
+
+**Scope:**
+
+- Serve fixtures through the project `.venv` using localhost only.
+- Generate media locally with FFmpeg: direct MP4, generic-MIME XHR, redirects, split tracks, HLS VOD/live, DASH, and multi-language audio.
+- Include SPA route changes, ad-before-content, two-player, iframe, and HLS Blob pages.
+- Include temporary HTTP failure, expired-token, cancellation, live-stop, and popup close/reopen scenarios.
+- Add a concise manual Chrome checklist and sanitized expected events.
+- Keep DRM and third-party media outside the fixture suite.
+
+**Acceptance criteria:**
+
+- [ ] One command from the project `.venv` starts the complete fixture site.
+- [ ] Fixtures are deterministic and require no internet access.
+- [ ] Each planned compatibility item has at least one failing-before/passing-after scenario.
+- [ ] Windows Chrome results can be recorded without capturing cookies or signed URLs.
+
+### OCVD-013 — Explicit yt-dlp compatibility lifecycle
+
+**Priority:** P1
+
+**Outcome:** Site extractor breakage is diagnosable and recoverable through a reviewed, explicit update without silent dependency changes.
+
+**Scope:**
+
+- Report installed, pinned, and recommended yt-dlp versions in host capabilities.
+- Show a concise “extractor update available” state only when the fallback is relevant.
+- Add an explicit installer upgrade flag that installs the reviewed lock file into the production `.venv`.
+- Add a local generic-extractor fixture to verify progress, merge, cancellation, and cookie-file cleanup.
+- Document the version-review process and rollback command.
+- Keep auto-update, remote components, and plugin directories disabled.
+
+**Acceptance criteria:**
+
+- [ ] Normal sniffed downloads never depend on yt-dlp version state.
+- [ ] An outdated installation is distinguishable from an unsupported page.
+- [ ] Upgrade and rollback are explicit and remain inside the production `.venv`.
+- [ ] The host never downloads or executes an update on its own.
+- [ ] A localhost generic-extractor fixture passes without external sites.
+
+### OCVD-014 — Portable playback and HDR policy
+
+**Priority:** P2 — conditional
+
+**Activation condition:** A valid MP4 produced by stream copy fails playback in the target Windows/browser environment, or an HDR transcode produces visibly incorrect output.
+
+**Outcome:** “Compatible MP4” means playable on the target device, not merely accepted by the MP4 muxer.
+
+**Scope:**
+
+- Separate container compatibility from browser/OS decoder compatibility.
+- Probe codec profile/level, pixel format, color primaries, transfer function, and HDR metadata.
+- Check browser decode support before copying HEVC/AV1 or other advanced streams.
+- Preserve HDR when supported; otherwise use an explicit tested tone-map path or fail clearly rather than silently washing out color.
+- Keep H.264/AAC as the conservative fallback and warn before unusually expensive transcodes.
+
+**Acceptance criteria:**
+
+- [ ] H.264/AAC remains the broad baseline.
+- [ ] HEVC/AV1 is copied only when the target playback profile reports support.
+- [ ] HDR fixtures preserve metadata or pass a visual/metadata tone-map check.
+- [ ] Unsupported advanced codecs never produce a “complete” file that the target browser cannot decode.
+
+### OCVD-015 — Frame-aware deep detection
+
+**Priority:** P2 — conditional
+
+**Activation condition:** An authorized embedded player constructs a valid HLS Blob inside a child frame and normal detection plus yt-dlp both fail.
+
+**Outcome:** Deep detection can observe the opted-in player frame without becoming a global all-frame injector.
+
+**Scope:**
+
+- Associate deep candidates with sender `frameId` and `documentId`.
+- Enable matching child frames only for the user-approved site/player origins.
+- Feature-detect `allFrames` and `matchOriginAsFallback`; the latter requires Chrome 119+.
+- Cover `about:`, `data:`, and `blob:` child frames only when their fallback origin matches an approved origin.
+- Preserve the 2 MiB HLS-only limit and avoid fetch/XHR interception.
+
+**Acceptance criteria:**
+
+- [ ] A same-origin iframe Blob fixture is detected after opt-in.
+- [ ] A cross-origin player requires explicit origin approval.
+- [ ] Unrelated frames receive no main-world detector.
+- [ ] Candidates remain isolated by frame/document during selection.
+
+**Reference:** [Chrome dynamic content-script frame options](https://developer.chrome.com/docs/extensions/reference/api/scripting#type-RegisteredContentScript)
+
+### OCVD-016 — Expired signed-URL reacquisition
+
+**Priority:** P2 — conditional
+
+**Activation condition:** A reproducible authorized stream expires between detection and native retrieval and succeeds after the page requests a fresh URL.
+
+**Outcome:** A single expired media token can be replaced from newly observed page traffic without credential automation or infinite authentication retries.
+
+**Scope:**
+
+- Classify `401`, `403`, and `410` separately from transient network failures.
+- Emit a sanitized “waiting for refreshed media” state tied to the original document/frame/session.
+- Accept only a newly observed candidate with the same media kind and playback group.
+- Retry once with the new URL/header context; never retry the rejected URL.
+- Bound the wait and preserve all URL/token redaction.
+
+**Acceptance criteria:**
+
+- [ ] A rotating-token localhost fixture succeeds after one fresh candidate is observed.
+- [ ] No new candidate returns a concise timeout without leaving partial output.
+- [ ] Authentication failures never enter the normal network retry loop.
+- [ ] Candidates from another tab/frame/player cannot satisfy the refresh.
+
+## Recommended compatibility sequence
+
+1. Build OCVD-012 fixtures for the current released behavior.
+2. Implement the correctness floor: OCVD-007, OCVD-008, and OCVD-009.
+3. Expand common-site coverage with OCVD-010 and OCVD-011.
+4. Add OCVD-013 without changing the normal detector path.
+5. Implement OCVD-014 through OCVD-016 only after their activation conditions are reproduced.
+
 ## Deferred or not planned
 
 These ideas were present in the references but do not currently justify their complexity:
@@ -216,6 +484,8 @@ These ideas were present in the references but do not currently justify their co
 - **Remote parser/plugin execution.** Do not download and evaluate third-party code.
 - **Silent FFmpeg or yt-dlp binary updates.** Updates must be explicit and versioned.
 - **External download-manager integrations.** File Centipede and Internet Download Accelerator references are product shortcuts, not reusable source.
+- **Flattening partitioned cookies into a Netscape cookie file.** Chrome partition keys carry security context that the legacy file format cannot represent. Reconsider only if the extractor gains a partition-aware handoff.
+- **WebSocket/WebTransport media reconstruction.** `webRequest` can observe handshakes but not individual payload messages; do not add a general traffic recorder without a narrow legal fixture.
 - **DRM decryption, paywall bypass, or credential automation.** Permanently out of scope.
 
 ## Security and licensing notes
@@ -234,4 +504,4 @@ These ideas were present in the references but do not currently justify their co
 - [x] Signed URLs, cookies, and authorization headers remain redacted.
 - [x] Windows Chrome installation and upgrade instructions are updated.
 - [x] The localhost HTTP smoke test covers retries, inline HLS, merging, and selective codecs.
-- [ ] A manual Windows Chrome smoke test passes before marking the item complete.
+- [x] A manual Windows Chrome smoke test passes before marking the item complete.
