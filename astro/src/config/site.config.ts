@@ -45,14 +45,13 @@ export const SITE = {
   license: 'GPL-3.0-only',
 
   /**
-   * External links. These are placeholders — fill them in before publishing.
-   * The primary install journey is on-page (#install), so the page is usable
-   * even while these point at "#".
+   * External links. All live as of 2026-06-23; the primary install journey is
+   * still on-page (#install), so the page stands alone regardless.
    */
   links: {
     repo: 'https://github.com/juansilvadesign/one-click-video-downloader',
-    // GitBook docs site (Git Sync). Custom domain; if DNS isn't live yet the
-    // GitBook-hosted proxy is https://proxy.gitbook.site/sites/site_qTNVY
+    // GitBook docs site (Git Sync) on the custom domain. GitBook-hosted
+    // fallback origin: https://proxy.gitbook.site/sites/site_qTNVY
     docs: 'https://one-click-video-downloader.juanpablosilva.com.br/docs',
     backlog: 'https://github.com/juansilvadesign/one-click-video-downloader/blob/main/BACKLOG.md',
     license: 'https://www.gnu.org/licenses/gpl-3.0.html',
