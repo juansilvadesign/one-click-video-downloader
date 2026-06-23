@@ -94,6 +94,13 @@ Prefer pure, deterministic functions for classification, scoring, pairing, and s
 - Registration occurs in the operating system running the browser.
 - Preserve uninstall and upgrade behavior when changing installed files.
 
+## Companion surfaces (not the extension runtime)
+
+Two auxiliary surfaces live in the repo alongside `extension/` and `native-host/`. Neither is loaded by the browser or the host. Do not let work on them touch the extension, the host, or the test suite, and do not pull their tooling into the extension build.
+
+- `astro/` — the marketing landing page. A self-contained Astro static site (pure `.astro` + scoped CSS, no React/Tailwind). Build with `npm install && npm run build` inside `astro/`; all copy and links live in `astro/src/config/site.config.ts`.
+- `docs/` + `.gitbook.yaml` — the GitBook documentation site, published via Git Sync (`root: ./docs/`, `README.md` home, `SUMMARY.md` nav). Pages are authored from `README.md`/`CONTEXT.md`/`THEORY.MD`; `reference/backlog.md` and `contributing.md` embed the canonical repo files. Keep them current when install steps or user-facing behavior change.
+
 ## Test commands
 
 From the project root:
@@ -123,7 +130,7 @@ For code changes:
 - Native commands remain shell-free argument arrays
 - Sensitive media context remains redacted
 - Required permission and security implications documented
-- README/CONTRIBUTING updated when installation or user behavior changes
+- README/CONTRIBUTING (and the GitBook `docs/`) updated when installation or user behavior changes
 - BACKLOG status changed only when its acceptance criteria are actually satisfied
 - Windows Chrome verification performed or explicitly left pending
 
@@ -241,6 +248,8 @@ Known non-blocking tooling behavior:
 | `tests/` | JavaScript, Python, and real FFmpeg fixtures |
 | `assets/` | Brand, extension icon, and README showcase assets |
 | `hyperframes/` | Editable video composition source |
+| `astro/` | Marketing landing page (Astro static site; not extension runtime) |
+| `docs/` + `.gitbook.yaml` | GitBook documentation site (Git Sync; not extension runtime) |
 
 ## Common mistakes
 

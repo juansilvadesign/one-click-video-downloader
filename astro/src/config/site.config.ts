@@ -51,8 +51,9 @@ export const SITE = {
    */
   links: {
     repo: 'https://github.com/juansilvadesign/one-click-video-downloader',
-    // points at the README setup section; swap for the GitBook URL once it's published
-    docs: 'https://github.com/juansilvadesign/one-click-video-downloader#readme',
+    // GitBook docs site (Git Sync). Custom domain; if DNS isn't live yet the
+    // GitBook-hosted proxy is https://proxy.gitbook.site/sites/site_qTNVY
+    docs: 'https://one-click-video-downloader.juanpablosilva.com.br/docs',
     backlog: 'https://github.com/juansilvadesign/one-click-video-downloader/blob/main/BACKLOG.md',
     license: 'https://www.gnu.org/licenses/gpl-3.0.html',
   },

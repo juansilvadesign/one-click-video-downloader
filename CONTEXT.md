@@ -258,3 +258,12 @@ For a zero-context coding session:
 4. `BACKLOG.md` for the requested item
 5. The relevant implementation and tests
 6. `README.md` or `CONTRIBUTING.md` when behavior, installation, release, or contributor guidance changes
+
+## 12. Landing page and documentation site
+
+Two companion surfaces live in the repo. Neither is part of the extension or native-host runtime; the browser and host never load them.
+
+- `astro/` — a self-contained marketing landing page (Astro static site, pure `.astro` + scoped CSS, no React/Tailwind, recolored to the brand's blue logo gradient with Space Grotesk + Outfit). All copy and links are config-driven in `astro/src/config/site.config.ts`. Build with `npm install && npm run build` inside `astro/`. It reuses the showcase and logo assets from `assets/` and the README narrative.
+- `docs/` + `.gitbook.yaml` — the GitBook documentation site, published via GitBook Git Sync (`root: ./docs/`, `README.md` home, `SUMMARY.md` nav). Pages are authored from this `CONTEXT.md`, the `README.md`, and `THEORY.MD`; `reference/backlog.md` and `contributing.md` embed the canonical `BACKLOG.md`/`CONTRIBUTING.md` so they do not drift. Live at `https://one-click-video-downloader.juanpablosilva.com.br/docs`.
+
+When user-facing behavior or installation changes, update the `README.md`, the GitBook `docs/`, and the landing-page copy in `astro/src/config/site.config.ts` together.

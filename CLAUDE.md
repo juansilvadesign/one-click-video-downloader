@@ -60,6 +60,13 @@ Prefer pure, deterministic functions for classification, scoring, pairing, slugg
 - `one_click_video_host.py` — framed protocol, validation, probing, job registry, retries, process control, and optional extractor. Keep the read loop responsive while jobs run; cap concurrency at `MAX_CONCURRENT_JOBS`; reserve output filenames atomically so concurrent same-title jobs never clobber each other. Distinguish cancel from live **Stop and save**; select video/audio copy or transcode independently; keep reconnects, full-job retries, and authentication failures as separate policies.
 - `install_host.py` — copies the host, creates the production `.venv`, writes a launcher bound to it, and registers the exact extension ID. Preserve uninstall and upgrade behavior.
 
+## Companion surfaces (not the extension runtime)
+
+Two auxiliary surfaces live in the repo alongside `extension/` and `native-host/`. Neither is loaded by the browser or the host. Do not let work on them touch the extension, the host, or the test suite, and do not pull their tooling into the extension build.
+
+- `astro/` — the marketing landing page. A self-contained Astro static site (pure `.astro` + scoped CSS, no React/Tailwind). Build with `npm install && npm run build` inside `astro/`; all copy and links live in `astro/src/config/site.config.ts`.
+- `docs/` + `.gitbook.yaml` — the GitBook documentation site, published via Git Sync (`root: ./docs/`, `README.md` home, `SUMMARY.md` nav). Pages are authored from `README.md`/`CONTEXT.md`/`THEORY.MD`; `reference/backlog.md` and `contributing.md` embed the canonical repo files. Keep them current when install steps or user-facing behavior change.
+
 ## Test commands
 
 ```bash
@@ -75,7 +82,7 @@ Run the smallest relevant test while iterating, then `npm test` before handing o
 
 - Relevant regression test added or updated; `npm test` passes; HTTP/FFmpeg smoke passes when applicable.
 - No global Python used; direct-MP4 path intact; native commands remain shell-free argument arrays; sensitive media context stays redacted (including persisted state).
-- Permission and security implications documented; README/CONTRIBUTING updated when installation or user behavior changes.
+- Permission and security implications documented; README/CONTRIBUTING (and the GitBook `docs/`) updated when installation or user behavior changes.
 - `BACKLOG.md` status changed only when its acceptance criteria are actually satisfied, including the required Windows Chrome verification.
 
 For diagnosis-only requests, inspect and explain the cause; do not implement unless requested.
