@@ -1,0 +1,9 @@
+# GitBook configuration — https://gitbook.com/docs/getting-started/git-sync
+#
+# Syncs the docs/ folder of this repository into a GitBook space.
+# `readme` and `summary` paths are resolved relative to `root`.
+root: ./docs/
+
+structure:
+  readme: README.md
+  summary: SUMMARY.md
