@@ -1,0 +1,53 @@
+---
+import { SITE } from '../../config/site.config';
+
+interface Props {
+  title: string;
+  description?: string;
+  image?: string;
+  schema?: Record<string, unknown> | Array<Record<string, unknown>>;
+}
+
+const {
+  title,
+  description = SITE.description,
+  image = SITE.ogImage,
+  schema,
+} = Astro.props;
+
+// Build absolute URLs against the configured `site` (falls back gracefully).
+const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
+const ogImageAbs = new URL(image, Astro.site ?? Astro.url).href;
+---
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+
+<!-- Icons -->
+<link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
+<meta name="theme-color" content="#0A84FF" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={ogImageAbs} />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImageAbs} />
+
+{schema && (
+  <script
+    type="application/ld+json"
+    set:html={JSON.stringify(schema)}
+  />
+)}

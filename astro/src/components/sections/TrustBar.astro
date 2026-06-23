@@ -1,0 +1,33 @@
+---
+import { TRUST_CHIPS } from '../../config/site.config';
+---
+<section class="trustbar" aria-label="Supported formats">
+  <div class="container">
+    <p class="trustbar-label">Detects and saves</p>
+    <ul class="trustbar-chips reveal">
+      {TRUST_CHIPS.map((c) => (
+        <li class="chip"><span class="chip-dot"></span>{c}</li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .trustbar { padding-block: 28px 8px; }
+  .trustbar-label {
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 18px;
+  }
+  .trustbar-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+</style>

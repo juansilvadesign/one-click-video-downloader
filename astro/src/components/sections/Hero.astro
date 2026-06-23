@@ -1,0 +1,188 @@
+---
+import { SITE, HERO } from '../../config/site.config';
+import Icon from '../ui/Icon.astro';
+import Button from '../ui/Button.astro';
+---
+<section class="hero" id="top">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="container hero-inner">
+    <div class="hero-copy reveal">
+      <span class="eyebrow">{HERO.eyebrow}</span>
+      <h1>
+        {HERO.titleLead}{' '}
+        <span class="gradient-text">{HERO.titleGradient}</span>.
+      </h1>
+      <p class="hero-lead">{HERO.body}</p>
+
+      <div class="hero-ctas">
+        <Button href={HERO.primaryCta.href} label={HERO.primaryCta.label} variant="primary" iconBefore="download" icon={null} />
+        <Button href={HERO.secondaryCta.href} label={HERO.secondaryCta.label} variant="secondary" icon="arrow" />
+      </div>
+
+      <ul class="hero-trust">
+        {HERO.trust.map((t) => (
+          <li><Icon name="check" size={16} /><span>{t}</span></li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="hero-visual reveal">
+      <div class="window">
+        <div class="window-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="window-url"><Icon name="lock" size={12} /> best quality · local processing</span>
+        </div>
+        <img
+          class="window-media"
+          src={SITE.showcase.animated}
+          alt="One-Click Video Downloader detecting the best source, merging it locally, and saving an MP4"
+          width="1280"
+          height="720"
+          loading="eager"
+          decoding="async"
+        />
+      </div>
+
+      <div class="saved-card" aria-hidden="true">
+        <span class="saved-icon"><Icon name="check" size={16} /></span>
+        <span class="saved-text">
+          <strong>video.mp4</strong>
+          <em>Saved locally · ready to use</em>
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero { position: relative; padding-block: clamp(56px, 9vw, 104px) clamp(48px, 7vw, 72px); overflow: hidden; }
+  .hero-bg {
+    position: absolute;
+    inset: -20% -10% auto -10%;
+    height: 620px;
+    background:
+      radial-gradient(620px 380px at 78% 8%, rgba(0, 198, 253, 0.16), transparent 70%),
+      radial-gradient(520px 360px at 18% 0%, rgba(8, 77, 240, 0.10), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .hero-inner {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    align-items: center;
+    gap: clamp(32px, 5vw, 64px);
+  }
+
+  h1 {
+    font-size: clamp(38px, 5.6vw, 60px);
+    line-height: 1.08;
+    letter-spacing: -1.4px;
+  }
+  .hero-lead {
+    margin-top: 22px;
+    font-size: clamp(17px, 1.4vw, 19px);
+    line-height: 1.75;
+    color: var(--text-muted);
+    max-width: 540px;
+  }
+  .hero-ctas { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 32px; }
+
+  .hero-trust {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    margin-top: 28px;
+  }
+  .hero-trust li {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .hero-trust svg { color: var(--primary); }
+
+  /* Browser window mockup */
+  .hero-visual { position: relative; }
+  .window {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 30px 60px -28px rgba(15, 23, 42, 0.32), var(--shadow-card);
+    overflow: hidden;
+  }
+  .window-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .window-bar .dot { width: 11px; height: 11px; border-radius: 50%; background: #cbd5e1; }
+  .window-bar .dot:nth-child(1) { background: #f87171; }
+  .window-bar .dot:nth-child(2) { background: #fbbf24; }
+  .window-bar .dot:nth-child(3) { background: #34d399; }
+  .window-url {
+    margin-left: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.2px;
+  }
+  .window-media { width: 100%; height: auto; display: block; background: var(--bg); }
+
+  .saved-card {
+    position: absolute;
+    left: -18px;
+    bottom: -22px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-card-hover);
+    animation: float 5s ease-in-out infinite;
+  }
+  .saved-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--gradient-brand);
+    color: #fff;
+  }
+  .saved-text { display: flex; flex-direction: column; line-height: 1.2; }
+  .saved-text strong { font-family: var(--font-display); font-size: 14px; color: var(--text); }
+  .saved-text em { font-style: normal; font-size: 12px; color: var(--text-muted); }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  @media (max-width: 940px) {
+    .hero-inner { grid-template-columns: 1fr; }
+    .hero-copy { text-align: center; }
+    .hero-lead { margin-inline: auto; }
+    .hero-ctas, .hero-trust { justify-content: center; }
+    .hero-visual { max-width: 560px; margin-inline: auto; width: 100%; }
+  }
+  @media (max-width: 520px) {
+    .saved-card { left: 8px; bottom: -18px; padding: 10px 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .saved-card { animation: none; }
+  }
+</style>

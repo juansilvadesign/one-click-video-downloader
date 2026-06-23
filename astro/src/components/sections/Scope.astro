@@ -1,0 +1,56 @@
+---
+import { SCOPE } from '../../config/site.config';
+import Icon from '../ui/Icon.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+
+const titleHtml = SCOPE.title.replace('does not', '<span class="gradient-text">does not</span>');
+---
+<section class="section" id="scope">
+  <div class="container">
+    <SectionHeading eyebrow={SCOPE.eyebrow} title={titleHtml} subtitle={SCOPE.body} />
+    <ul class="scope-list reveal">
+      {SCOPE.excluded.map((x) => (
+        <li class="scope-item">
+          <span class="x-mark"><Icon name="arrow" size={14} /></span>
+          {x}
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .scope-list {
+    margin-top: 48px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+    max-width: 860px;
+    margin-inline: auto;
+  }
+  .scope-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 22px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-muted);
+    border: 1px dashed var(--border-strong);
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+  .x-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fee2e2;
+    color: #dc2626;
+    transform: rotate(-45deg);
+  }
+</style>

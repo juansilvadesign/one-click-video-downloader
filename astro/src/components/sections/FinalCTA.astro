@@ -1,0 +1,70 @@
+---
+import { SITE, FINAL_CTA } from '../../config/site.config';
+import Button from '../ui/Button.astro';
+---
+<section class="finalcta">
+  <div class="container">
+    <div class="finalcta-card reveal">
+      <img class="finalcta-logo" src={SITE.logos.white} alt="" aria-hidden="true" width="64" height="64" />
+      <h2>{FINAL_CTA.title}</h2>
+      <p>{FINAL_CTA.body}</p>
+      <div class="finalcta-actions">
+        <Button href={FINAL_CTA.primaryCta.href} label={FINAL_CTA.primaryCta.label} variant="secondary" class="cta-light" iconBefore="download" icon={null} />
+        <Button href={FINAL_CTA.secondaryCta.href} label={FINAL_CTA.secondaryCta.label} variant="on-dark" iconBefore="github" icon={null} />
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .finalcta { padding-block: clamp(48px, 7vw, 80px); }
+  .finalcta-card {
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    padding: clamp(44px, 7vw, 76px) 28px;
+    border-radius: 28px;
+    background: var(--gradient-dark);
+    box-shadow: 0 40px 80px -40px rgba(8, 77, 240, 0.5);
+  }
+  .finalcta-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(520px 280px at 18% -10%, rgba(0, 198, 253, 0.22), transparent 70%),
+      radial-gradient(520px 300px at 88% 120%, rgba(8, 77, 240, 0.28), transparent 70%);
+    pointer-events: none;
+  }
+  .finalcta-card > * { position: relative; z-index: 1; }
+  .finalcta-logo { margin: 0 auto 22px; width: 60px; height: 60px; opacity: 0.95; }
+  .finalcta-card h2 {
+    font-size: clamp(28px, 4.6vw, 44px);
+    color: #fff;
+    letter-spacing: -0.6px;
+  }
+  .finalcta-card p {
+    margin: 16px auto 0;
+    max-width: 520px;
+    font-size: 18px;
+    color: var(--text-on-dark-muted);
+  }
+  .finalcta-actions {
+    margin-top: 34px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: center;
+  }
+  /* solid light button on the dark card */
+  .finalcta-actions :global(.cta-light) {
+    background: #fff;
+    color: var(--brand-navy);
+    border-color: #fff;
+  }
+  .finalcta-actions :global(.cta-light:hover) {
+    background: #eef2f7;
+    color: var(--primary-deep);
+    border-color: #eef2f7;
+  }
+</style>

@@ -1,0 +1,22 @@
+---
+/**
+ * SectionHeading.astro — eyebrow + gradient-accented H2 + optional subtitle.
+ * The H2 text may contain a <gradient>…</gradient> span (already rendered by
+ * the caller via `titleHtml`), or pass a plain `title` string.
+ */
+interface Props {
+  eyebrow?: string;
+  title: string;
+  subtitle?: string;
+  center?: boolean;
+  class?: string;
+}
+
+const { eyebrow, title, subtitle, center = true, class: className } = Astro.props;
+const cls = `heading ${center ? 'heading--center' : ''} ${className ?? ''}`.trim();
+---
+<div class={cls}>
+  {eyebrow && <span class="eyebrow">{eyebrow}</span>}
+  <h2><Fragment set:html={title} /></h2>
+  {subtitle && <p>{subtitle}</p>}
+</div>

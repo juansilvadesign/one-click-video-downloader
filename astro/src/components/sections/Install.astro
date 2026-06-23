@@ -1,0 +1,182 @@
+---
+import { SITE, INSTALL } from '../../config/site.config';
+import Icon from '../ui/Icon.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import Button from '../ui/Button.astro';
+
+const titleHtml = INSTALL.title.replace('a few minutes', '<span class="gradient-text">a few minutes</span>');
+---
+<section class="section section--muted" id="install">
+  <div class="container">
+    <SectionHeading eyebrow={INSTALL.eyebrow} title={titleHtml} subtitle={INSTALL.subtitle} />
+
+    <div class="install-grid">
+      <aside class="req card reveal">
+        <h3>Requirements</h3>
+        <ul>
+          {INSTALL.requirements.map((r) => (
+            <li><span class="req-check"><Icon name="check" size={14} /></span>{r}</li>
+          ))}
+        </ul>
+        <p class="req-note">
+          <Icon name="lock" size={14} />
+          Direct MP4 saves work with the extension alone.
+        </p>
+      </aside>
+
+      <ol class="install-steps">
+        {INSTALL.steps.map((s) => (
+          <li class="istep reveal">
+            <span class="istep-num">{s.index}</span>
+            <div class="istep-body">
+              <h4><span class="icon-badge istep-badge"><Icon name={s.icon} size={18} /></span>{s.title}</h4>
+              <p>{s.body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+
+    <figure class="code reveal">
+      <figcaption>
+        <span class="code-dots"><span></span><span></span><span></span></span>
+        Install the native host
+      </figcaption>
+      <pre><code>{INSTALL.installCommand}</code></pre>
+    </figure>
+
+    <div class="install-cta reveal">
+      <Button href={SITE.links.docs} label="Read the full setup guide" variant="secondary" icon="arrow" />
+      <p>Windows, Linux, and WSL instructions, plus troubleshooting, live in the project README.</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .install-grid {
+    margin-top: 56px;
+    display: grid;
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: 22px;
+    align-items: start;
+  }
+
+  .req { padding: 30px 28px; position: sticky; top: 96px; }
+  .req h3 { font-size: 20px; margin-bottom: 20px; }
+  .req ul { display: grid; gap: 14px; }
+  .req li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+  .req-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--gradient-brand);
+    color: #fff;
+    margin-top: 1px;
+  }
+  .req-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    font-size: 13.5px;
+    color: var(--text-muted);
+  }
+  .req-note svg { color: var(--primary); flex-shrink: 0; }
+
+  .install-steps { display: grid; gap: 14px; }
+  .istep {
+    display: flex;
+    gap: 18px;
+    padding: 24px 26px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+  .istep-num {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+    color: transparent;
+    -webkit-text-stroke: 1.4px var(--border-strong);
+    flex-shrink: 0;
+    min-width: 30px;
+  }
+  .istep-body h4 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  .istep-badge { width: 38px; height: 38px; border-radius: 11px; margin-bottom: 0; }
+  .istep-body p { font-size: 14.5px; line-height: 1.65; color: var(--text-muted); }
+
+  .code {
+    margin-top: 24px;
+    background: var(--brand-navy);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    box-shadow: 0 24px 50px -28px rgba(15, 23, 42, 0.5);
+  }
+  .code figcaption {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--text-on-dark-muted);
+  }
+  .code-dots { display: inline-flex; gap: 7px; }
+  .code-dots span { width: 11px; height: 11px; border-radius: 50%; background: rgba(255,255,255,0.2); }
+  .code-dots span:nth-child(1) { background: #f87171; }
+  .code-dots span:nth-child(2) { background: #fbbf24; }
+  .code-dots span:nth-child(3) { background: #34d399; }
+  .code pre {
+    margin: 0;
+    padding: 22px 24px;
+    overflow-x: auto;
+  }
+  .code code {
+    font-family: 'SFMono-Regular', ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #cbd5e1;
+    white-space: pre;
+  }
+
+  .install-cta {
+    margin-top: 32px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px 22px;
+    justify-content: center;
+    text-align: center;
+  }
+  .install-cta p { font-size: 14px; color: var(--text-muted); max-width: 360px; }
+
+  @media (max-width: 880px) {
+    .install-grid { grid-template-columns: 1fr; }
+    .req { position: static; }
+  }
+</style>

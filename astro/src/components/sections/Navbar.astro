@@ -1,0 +1,163 @@
+---
+import { SITE, NAV_LINKS } from '../../config/site.config';
+import Icon from '../ui/Icon.astro';
+---
+<header class="nav" id="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="#top" aria-label={`${SITE.name} — home`}>
+      <img src={SITE.logos.color} alt="" width="38" height="38" class="brand-mark" />
+      <span class="brand-name">
+        <strong>One-Click</strong><span>Video Downloader</span>
+      </span>
+    </a>
+
+    <nav class="nav-links" aria-label="Primary">
+      {NAV_LINKS.map((l) => <a href={l.href}>{l.label}</a>)}
+    </nav>
+
+    <div class="nav-actions">
+      <a class="nav-ghost" href={SITE.links.repo} aria-label="View source on GitHub"
+         rel="noopener noreferrer" target={SITE.links.repo.startsWith('http') ? '_blank' : undefined}>
+        <Icon name="github" size={20} />
+      </a>
+      <a class="btn btn-primary nav-cta" href="#install">
+        <Icon name="download" />
+        <span>Install</span>
+      </a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav-mobile">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="nav-mobile" id="nav-mobile" hidden>
+    <nav aria-label="Mobile">
+      {NAV_LINKS.map((l) => <a href={l.href}>{l.label}</a>)}
+    </nav>
+    <a class="btn btn-primary" href="#install"><Icon name="download" /><span>Install the extension</span></a>
+  </div>
+</header>
+
+<style>
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--t-base), box-shadow var(--t-base), background var(--t-base);
+  }
+  .nav.scrolled {
+    border-bottom-color: var(--border);
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04), 0 6px 24px rgba(15, 23, 42, 0.04);
+  }
+  .nav-inner {
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .brand { display: inline-flex; align-items: center; gap: 12px; }
+  .brand-mark { border-radius: 9px; }
+  .brand-name {
+    display: flex;
+    flex-direction: column;
+    font-family: var(--font-display);
+    line-height: 1.05;
+  }
+  .brand-name strong { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
+  .brand-name span { font-size: 11.5px; font-weight: 500; color: var(--text-muted); letter-spacing: 0.3px; }
+
+  .nav-links { display: flex; align-items: center; gap: 30px; }
+  .nav-links a {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .nav-links a:hover { color: var(--primary); }
+
+  .nav-actions { display: flex; align-items: center; gap: 12px; }
+  .nav-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+  }
+  .nav-ghost:hover { color: var(--primary); border-color: var(--border-strong); background: var(--bg-muted); }
+  .nav-cta { padding: 11px 22px; font-size: 15px; }
+
+  .nav-toggle {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+  }
+  .nav-toggle span {
+    width: 22px; height: 2px; border-radius: 2px;
+    background: var(--text);
+    transition: transform var(--t-base), opacity var(--t-base);
+  }
+  .nav-toggle[aria-expanded='true'] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .nav-toggle[aria-expanded='true'] span:nth-child(2) { opacity: 0; }
+  .nav-toggle[aria-expanded='true'] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  .nav-mobile {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px var(--container-pad) 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-mobile nav { display: flex; flex-direction: column; }
+  .nav-mobile nav a {
+    padding: 13px 4px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-mobile .btn { margin-top: 14px; justify-content: center; }
+
+  @media (max-width: 880px) {
+    .nav-links, .nav-cta { display: none; }
+    .nav-toggle { display: flex; }
+    .nav-mobile[data-open='true'] { display: flex; }
+  }
+</style>
+
+<script>
+  // Shadow on scroll
+  const nav = document.getElementById('nav');
+  const onScroll = () => nav?.classList.toggle('scrolled', window.scrollY > 8);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  // Mobile menu
+  const toggle = document.getElementById('nav-toggle');
+  const mobile = document.getElementById('nav-mobile');
+  const setOpen = (open: boolean) => {
+    toggle?.setAttribute('aria-expanded', String(open));
+    if (mobile) {
+      mobile.dataset.open = String(open);
+      mobile.hidden = !open;
+    }
+  };
+  toggle?.addEventListener('click', () =>
+    setOpen(toggle.getAttribute('aria-expanded') !== 'true')
+  );
+  mobile?.querySelectorAll('a').forEach((a) =>
+    a.addEventListener('click', () => setOpen(false))
+  );
+</script>

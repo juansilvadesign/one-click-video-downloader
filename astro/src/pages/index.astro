@@ -1,0 +1,57 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE, FAQ_ITEMS } from '../config/site.config';
+
+import Hero from '../components/sections/Hero.astro';
+import TrustBar from '../components/sections/TrustBar.astro';
+import HowItWorks from '../components/sections/HowItWorks.astro';
+import Features from '../components/sections/Features.astro';
+import Privacy from '../components/sections/Privacy.astro';
+import Scope from '../components/sections/Scope.astro';
+import Install from '../components/sections/Install.astro';
+import FAQ from '../components/sections/FAQ.astro';
+import FinalCTA from '../components/sections/FinalCTA.astro';
+
+const schema = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: SITE.name,
+    applicationCategory: 'BrowserApplication',
+    operatingSystem: 'Chrome, Edge (Chromium 102+)',
+    description: SITE.description,
+    softwareVersion: SITE.version,
+    license: SITE.links.license,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    featureList: [
+      'Direct MP4 detection and browser download',
+      'HLS (.m3u8) and DASH (.mpd) detection',
+      'Automatic pairing of separate video and audio',
+      'Live-stream recording with Stop and save',
+      'Codec-aware selective transcoding',
+      'Concurrent local downloads with live progress',
+      'Local-only processing with no analytics',
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQ_ITEMS.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+<BaseLayout schema={schema}>
+  <Hero />
+  <TrustBar />
+  <HowItWorks />
+  <Features />
+  <Privacy />
+  <Scope />
+  <Install />
+  <FAQ />
+  <FinalCTA />
+</BaseLayout>

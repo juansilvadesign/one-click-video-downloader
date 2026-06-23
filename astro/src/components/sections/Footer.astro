@@ -1,0 +1,109 @@
+---
+import { SITE, FOOTER } from '../../config/site.config';
+import Icon from '../ui/Icon.astro';
+
+const year = new Date().getFullYear();
+---
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <a class="footer-logo" href="#top" aria-label={`${SITE.name} — home`}>
+        <img src={SITE.logos.color} alt="" width="40" height="40" />
+        <span><strong>One-Click</strong><em>Video Downloader</em></span>
+      </a>
+      <p class="footer-blurb">{FOOTER.blurb}</p>
+      <a class="footer-source" href={SITE.links.repo}
+         rel="noopener noreferrer" target={SITE.links.repo.startsWith('http') ? '_blank' : undefined}>
+        <Icon name="github" size={18} /> View source
+      </a>
+    </div>
+
+    <nav class="footer-cols" aria-label="Footer">
+      {FOOTER.columns.map((col) => (
+        <div class="footer-col">
+          <h3>{col.title}</h3>
+          <ul>
+            {col.links.map((l) => {
+              const external = l.href.startsWith('http');
+              return (
+                <li>
+                  <a href={l.href}
+                     rel={external ? 'noopener noreferrer' : undefined}
+                     target={external ? '_blank' : undefined}>{l.label}</a>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  </div>
+
+  <div class="container footer-bottom">
+    <p>© {year} {SITE.name} · {SITE.license}</p>
+    <p class="footer-legal">{FOOTER.legal}</p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    background: var(--bg-muted);
+    border-top: 1px solid var(--border);
+    padding-top: 64px;
+  }
+  .footer-inner {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 48px;
+    padding-bottom: 48px;
+  }
+  .footer-logo { display: inline-flex; align-items: center; gap: 12px; }
+  .footer-logo img { border-radius: 9px; }
+  .footer-logo span { display: flex; flex-direction: column; font-family: var(--font-display); line-height: 1.1; }
+  .footer-logo strong { font-size: 17px; color: var(--text); }
+  .footer-logo em { font-style: normal; font-size: 12px; color: var(--text-muted); }
+  .footer-blurb { margin-top: 16px; max-width: 360px; font-size: 14.5px; line-height: 1.65; color: var(--text-muted); }
+  .footer-source {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+  .footer-source:hover { color: var(--primary); }
+
+  .footer-cols { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; }
+  .footer-col h3 {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+  .footer-col ul { display: grid; gap: 11px; }
+  .footer-col a { font-size: 14.5px; color: var(--text-secondary); }
+  .footer-col a:hover { color: var(--primary); }
+
+  .footer-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    padding-block: 22px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .footer-legal { color: var(--text-muted); }
+
+  @media (max-width: 720px) {
+    .footer-inner { grid-template-columns: 1fr; gap: 36px; }
+  }
+  @media (max-width: 420px) {
+    .footer-cols { grid-template-columns: 1fr; }
+  }
+</style>

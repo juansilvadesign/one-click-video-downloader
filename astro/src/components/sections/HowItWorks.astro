@@ -1,0 +1,66 @@
+---
+import { HOW } from '../../config/site.config';
+import Icon from '../ui/Icon.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+
+const titleHtml = HOW.title.replace('one action', '<span class="gradient-text">one action</span>');
+---
+<section class="section" id="how">
+  <div class="container">
+    <SectionHeading eyebrow={HOW.eyebrow} title={titleHtml} subtitle={HOW.subtitle} />
+
+    <ol class="steps">
+      {HOW.steps.map((s, i) => (
+        <li class="step card reveal" style={`transition-delay:${i * 80}ms`}>
+          <span class="step-index">{s.index}</span>
+          <span class="icon-badge"><Icon name={s.icon} /></span>
+          <h3>{s.title}</h3>
+          <p>{s.body}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .steps {
+    margin-top: 56px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+  }
+  .step { position: relative; padding: 30px 26px; }
+  .step-index {
+    position: absolute;
+    top: 22px;
+    right: 26px;
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    color: transparent;
+    -webkit-text-stroke: 1.4px var(--border-strong);
+  }
+  .step h3 { font-size: 19px; margin-bottom: 10px; }
+  .step p { font-size: 14.5px; line-height: 1.65; color: var(--text-muted); }
+
+  /* connector arrows between cards on wide screens */
+  .step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 56px;
+    right: -13px;
+    width: 26px;
+    height: 2px;
+    background: var(--border-strong);
+    z-index: 2;
+  }
+
+  @media (max-width: 980px) {
+    .steps { grid-template-columns: repeat(2, 1fr); }
+    .step:not(:last-child)::after { display: none; }
+  }
+  @media (max-width: 560px) {
+    .steps { grid-template-columns: 1fr; }
+  }
+</style>

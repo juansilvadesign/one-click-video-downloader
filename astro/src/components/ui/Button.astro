@@ -1,0 +1,32 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  href: string;
+  label: string;
+  variant?: 'primary' | 'secondary' | 'on-dark';
+  icon?: string | null;
+  iconBefore?: string | null;
+  class?: string;
+}
+
+const {
+  href,
+  label,
+  variant = 'primary',
+  icon = 'arrow',
+  iconBefore = null,
+  class: className,
+} = Astro.props;
+
+// Treat anything that isn't an in-page anchor or placeholder as external.
+const isExternal = /^https?:\/\//.test(href);
+const rel = isExternal ? 'noopener noreferrer' : undefined;
+const target = isExternal ? '_blank' : undefined;
+const cls = `btn btn-${variant} ${className ?? ''}`.trim();
+---
+<a href={href} class={cls} rel={rel} target={target}>
+  {iconBefore && <Icon name={iconBefore} />}
+  <span>{label}</span>
+  {icon && <Icon name={icon} />}
+</a>

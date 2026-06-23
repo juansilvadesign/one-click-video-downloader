@@ -1,0 +1,40 @@
+---
+import { FEATURES } from '../../config/site.config';
+import Icon from '../ui/Icon.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+
+const titleHtml = FEATURES.title.replace(
+  'complete where it counts',
+  '<span class="gradient-text">complete where it counts</span>'
+);
+---
+<section class="section section--muted" id="features">
+  <div class="container">
+    <SectionHeading eyebrow={FEATURES.eyebrow} title={titleHtml} subtitle={FEATURES.subtitle} />
+
+    <div class="features">
+      {FEATURES.items.map((f, i) => (
+        <article class="feature card reveal" style={`transition-delay:${(i % 3) * 80}ms`}>
+          <span class="icon-badge"><Icon name={f.icon} /></span>
+          <h3>{f.title}</h3>
+          <p>{f.body}</p>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .features {
+    margin-top: 56px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  .feature { padding: 34px 30px; }
+  .feature h3 { font-size: 20px; margin-bottom: 12px; }
+  .feature p { font-size: 15px; line-height: 1.68; color: var(--text-muted); }
+
+  @media (max-width: 900px) { .features { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .features { grid-template-columns: 1fr; } }
+</style>

@@ -1,0 +1,122 @@
+---
+import { SITE, PRIVACY } from '../../config/site.config';
+import Icon from '../ui/Icon.astro';
+---
+<section class="section section--dark" id="privacy">
+  <img class="privacy-watermark" src={SITE.logos.white} alt="" aria-hidden="true" width="420" height="420" />
+  <div class="container privacy-inner">
+    <div class="privacy-copy reveal">
+      <span class="eyebrow">{PRIVACY.eyebrow}</span>
+      <h2>{PRIVACY.title}</h2>
+      <p>{PRIVACY.body}</p>
+
+      <div class="privacy-flow" aria-hidden="true">
+        <span class="flow-node">Page</span>
+        <Icon name="arrow" size={18} />
+        <span class="flow-node">Local host</span>
+        <Icon name="arrow" size={18} />
+        <span class="flow-node flow-node--accent">Your disk</span>
+      </div>
+    </div>
+
+    <ul class="guarantees reveal">
+      {PRIVACY.guarantees.map((g) => (
+        <li>
+          <span class="g-check"><Icon name="check" size={15} /></span>
+          <span>{g.text}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .section--dark { overflow: hidden; }
+  .privacy-watermark {
+    position: absolute;
+    right: -90px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: clamp(260px, 36vw, 460px);
+    height: auto;
+    opacity: 0.05;
+    pointer-events: none;
+  }
+  .privacy-inner {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(32px, 5vw, 72px);
+    align-items: center;
+  }
+  .privacy-copy h2 { font-size: clamp(28px, 4vw, 38px); letter-spacing: -0.5px; color: #fff; }
+  .privacy-copy p {
+    margin-top: 18px;
+    font-size: 17px;
+    line-height: 1.75;
+    color: var(--text-on-dark-muted);
+    max-width: 520px;
+  }
+
+  .privacy-flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 30px;
+    color: var(--text-on-dark-muted);
+  }
+  .flow-node {
+    display: inline-flex;
+    align-items: center;
+    padding: 9px 18px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-on-dark);
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .flow-node--accent {
+    border-color: transparent;
+    background: var(--gradient-brand);
+    color: #fff;
+  }
+
+  .guarantees { display: grid; gap: 14px; }
+  .guarantees li {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 18px 20px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 15.5px;
+    line-height: 1.5;
+    color: var(--text-on-dark);
+    transition: border-color var(--t-base), background var(--t-base);
+  }
+  .guarantees li:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(0, 198, 253, 0.4);
+  }
+  .g-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--gradient-brand);
+    color: #fff;
+    margin-top: 1px;
+  }
+
+  @media (max-width: 860px) {
+    .privacy-inner { grid-template-columns: 1fr; }
+  }
+</style>

@@ -1,0 +1,62 @@
+---
+/**
+ * Icon.astro — inline SVG set keyed by name (no icon dependency).
+ * Stroke-based, 24×24, inherits `currentColor`. Pass `name` and optional
+ * `size`/`class`. Unknown names render nothing (and warn in dev).
+ */
+interface Props {
+  name: string;
+  size?: number;
+  class?: string;
+  'aria-hidden'?: boolean;
+}
+
+const { name, size = 24, class: className, ...rest } = Astro.props;
+
+// Each entry is the inner markup of a 24×24 stroke icon.
+const ICONS: Record<string, string> = {
+  // pipeline / how-it-works (genuine Lucide glyphs)
+  radar: '<path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/>',
+  route: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
+  cpu: '<path d="M12 20v2"/><path d="M12 2v2"/><path d="M17 20v2"/><path d="M17 2v2"/><path d="M2 12h2"/><path d="M2 17h2"/><path d="M2 7h2"/><path d="M20 12h2"/><path d="M20 17h2"/><path d="M20 7h2"/><path d="M7 20v2"/><path d="M7 2v2"/><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/>',
+  save: '<path d="M12 2v8"/><path d="m16 6-4 4-4-4"/><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 18h.01"/><path d="M10 18h.01"/>',
+  // features
+  cursor: '<path d="M5 3l14 8-6 1.5L9.5 18 5 3z"/>',
+  layers: '<path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/>',
+  record: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/>',
+  sliders: '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/>',
+  stack: '<path d="M4 7h13a2 2 0 0 1 2 2v0M4 7l3-3M4 7l3 3"/><path d="M20 17H7a2 2 0 0 1-2-2v0M20 17l-3-3M20 17l-3 3"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
+  // install
+  puzzle: '<path d="M19.5 12.5c.8 0 1.5-.7 1.5-1.5s-.7-1.5-1.5-1.5H18V7a2 2 0 0 0-2-2h-2.5V3.5C13.5 2.7 12.8 2 12 2s-1.5.7-1.5 1.5V5H8a2 2 0 0 0-2 2v2.5H4.5C3.7 9.5 3 10.2 3 11s.7 1.5 1.5 1.5H6V16a2 2 0 0 0 2 2h2.5v1.5c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5V18H16a2 2 0 0 0 2-2v-3.5h1.5z"/>',
+  terminal: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/>',
+  play: '<circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4V8z" fill="currentColor" stroke="none"/>',
+  // utility
+  arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  download: '<path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  github: '<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6A4.6 4.6 0 0 0 19 7.5 4.3 4.3 0 0 0 18.9 4S17.7 3.6 15 5.3a13.4 13.4 0 0 0-7 0C5.3 3.6 4.1 4 4.1 4A4.3 4.3 0 0 0 4 7.5 4.6 4.6 0 0 0 3 11c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V23"/>',
+};
+
+const inner = ICONS[name];
+if (import.meta.env.DEV && !inner) {
+  console.warn(`[Icon] unknown icon name: "${name}"`);
+}
+---
+{inner && (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.9"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    class={className}
+    aria-hidden="true"
+    set:html={inner}
+  />
+)}

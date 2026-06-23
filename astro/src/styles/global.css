@@ -1,0 +1,364 @@
+/* ════════════════════════════════════════════════════════════════
+   One-Click Video Downloader — Landing Page Design System
+
+   Light theme built around the brand's blue → cyan gradient
+   (#00C6FD → #084DF0) on slate neutrals, with a navy ink (#182539)
+   pulled straight from the logo. Structure and mechanics follow the
+   CocoCut reference (soft cards, pill buttons, gradient-text titles);
+   the palette is recolored to this project's real identity.
+
+   Type: Space Grotesk (display) + Outfit (body/UI).
+   ════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  /* ── Brand ─────────────────────────────────────────────── */
+  --primary: #0a84ff;          /* clean brand blue */
+  --primary-cyan: #00c6fd;     /* gradient start (logo) */
+  --primary-deep: #084df0;     /* gradient end (logo) */
+  --brand-navy: #182539;       /* logo ink / dark sections */
+  --brand-navy-deep: #0f1827;
+
+  /* ── Surfaces ──────────────────────────────────────────── */
+  --bg: #f8fafc;               /* page */
+  --bg-muted: #f1f5f9;         /* alternating sections */
+  --surface: #ffffff;          /* cards, navbar */
+
+  /* ── Text ──────────────────────────────────────────────── */
+  --text: #182539;             /* headings / strong text */
+  --text-secondary: #475569;
+  --text-muted: #64748b;       /* paragraphs */
+  --text-on-dark: #e2e8f0;
+  --text-on-dark-muted: #94a3b8;
+
+  /* ── Lines & inputs ────────────────────────────────────── */
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+
+  /* ── Gradients ─────────────────────────────────────────── */
+  --gradient-brand: linear-gradient(135deg, #00c6fd 0%, #0a84ff 50%, #084df0 100%);
+  --gradient-brand-soft: linear-gradient(135deg, rgba(0, 198, 253, 0.12), rgba(8, 77, 240, 0.12));
+  --gradient-dark: linear-gradient(160deg, #182539 0%, #0f1827 100%);
+
+  /* ── Shadows (brand-tinted) ────────────────────────────── */
+  --shadow-card: 0 4px 20px 0 rgba(10, 132, 255, 0.08);
+  --shadow-card-hover: 0 12px 34px 0 rgba(10, 132, 255, 0.16);
+  --shadow-btn: 0 8px 20px rgba(10, 132, 255, 0.32);
+
+  /* ── Type ──────────────────────────────────────────────── */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* ── Radii ─────────────────────────────────────────────── */
+  --radius-card: 20px;
+  --radius-sm: 12px;
+  --radius-pill: 999px;
+
+  /* ── Layout ────────────────────────────────────────────── */
+  --container: 1140px;
+  --container-pad: clamp(18px, 4vw, 28px);
+
+  /* ── Motion ────────────────────────────────────────────── */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 160ms var(--ease);
+  --t-base: 280ms var(--ease);
+}
+
+/* ── Reset ───────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-body);
+  font-size: 16px;
+  scroll-behavior: smooth;
+  scroll-padding-top: 96px; /* clears the sticky navbar on anchor jumps */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-muted);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--primary);
+  color: #fff;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  color: var(--text);
+  line-height: 1.15;
+  font-weight: 700;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--t-fast);
+}
+
+img, video, svg {
+  max-width: 100%;
+  display: block;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+/* ── Layout primitives ───────────────────────────────────── */
+
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--container-pad);
+}
+
+.section {
+  padding-block: clamp(72px, 10vw, 110px);
+  position: relative;
+}
+
+.section--muted {
+  background: var(--bg-muted);
+}
+
+.section--dark {
+  background: var(--gradient-dark);
+  color: var(--text-on-dark);
+}
+
+/* ── Eyebrow / section label ─────────────────────────────── */
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 16px;
+}
+
+.eyebrow::before {
+  content: '';
+  width: 22px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--gradient-brand);
+}
+
+.section--dark .eyebrow {
+  color: var(--primary-cyan);
+}
+
+/* ── Gradient text ───────────────────────────────────────── */
+
+.gradient-text {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px 30px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform var(--t-fast), box-shadow var(--t-fast), background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  white-space: nowrap;
+}
+
+.btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-primary {
+  background: var(--gradient-brand);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(10, 132, 255, 0.28);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-btn);
+  filter: brightness(1.04);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--primary);
+  border-color: var(--border-strong);
+}
+
+.btn-secondary:hover {
+  border-color: var(--primary);
+  color: var(--primary-deep);
+  transform: translateY(-2px);
+}
+
+/* on dark sections */
+.section--dark .btn-secondary,
+.btn-on-dark {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.section--dark .btn-secondary:hover,
+.btn-on-dark:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+}
+
+/* ── Chips ───────────────────────────────────────────────── */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gradient-brand);
+  flex-shrink: 0;
+}
+
+/* ── Card ────────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--t-base), box-shadow var(--t-base), border-color var(--t-base);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: rgba(10, 132, 255, 0.28);
+}
+
+/* Icon badge used on feature/step cards */
+.icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--gradient-brand-soft);
+  color: var(--primary);
+  margin-bottom: 20px;
+}
+
+.icon-badge svg {
+  width: 26px;
+  height: 26px;
+}
+
+/* ── Section heading block ───────────────────────────────── */
+
+.heading {
+  max-width: 720px;
+}
+
+.heading--center {
+  margin-inline: auto;
+  text-align: center;
+}
+
+.heading h2 {
+  font-size: clamp(28px, 4.4vw, 40px);
+  letter-spacing: -0.5px;
+}
+
+.heading p {
+  margin-top: 16px;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.section--dark .heading h2 {
+  color: #fff;
+}
+
+.section--dark .heading p {
+  color: var(--text-on-dark-muted);
+}
+
+/* ── Reveal-on-scroll (progressive, JS-toggled) ──────────── */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  * { animation-duration: 0.001ms !important; }
+}
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-muted); }
+::-webkit-scrollbar-thumb {
+  background: #c7d2e0;
+  border-radius: 999px;
+  border: 2px solid var(--bg-muted);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
