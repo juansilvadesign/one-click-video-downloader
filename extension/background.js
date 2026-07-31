@@ -268,7 +268,10 @@ async function updateBadge(tabId) {
   await chrome.action.setBadgeText({ tabId, text: count ? String(Math.min(count, 99)) : "" });
 }
 
-chrome.tabs.onRemoved.addListener((tabId) => void clearTab(tabId));
+chrome.tabs.onRemoved.addListener((tabId) => {
+  void clearTab(tabId);
+  if (tabAudioCapture?.tabId === tabId) void abandonTabAudioCapture();
+});
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === "loading" && changeInfo.url) void clearTab(tabId);
 });
@@ -683,6 +686,115 @@ async function deepDetectionEnabled(tab) {
   }
 }
 
+const OFFSCREEN_PATH = "offscreen.html";
+
+let tabAudioCapture = null;
+
+async function ensureOffscreenDocument() {
+  if (typeof chrome.offscreen?.createDocument !== "function") {
+    throw new Error("This browser version does not support offscreen recording");
+  }
+  try {
+    await chrome.offscreen.createDocument({
+      url: OFFSCREEN_PATH,
+      reasons: ["USER_MEDIA"],
+      justification: "Record the selected tab's audio into a local file."
+    });
+  } catch (error) {
+    if (!/single offscreen document/i.test(error.message || "")) throw error;
+  }
+}
+
+function closeOffscreenDocument() {
+  return chrome.offscreen?.closeDocument?.().catch(() => undefined);
+}
+
+function waitForDownload(downloadId) {
+  return new Promise((resolve) => {
+    const listener = (delta) => {
+      if (delta.id !== downloadId || !delta.state) return;
+      const current = delta.state.current;
+      if (current !== "complete" && current !== "interrupted") return;
+      chrome.downloads.onChanged.removeListener(listener);
+      resolve(current);
+    };
+    chrome.downloads.onChanged.addListener(listener);
+  });
+}
+
+async function startTabAudioCapture(tabId) {
+  await ready;
+  if (tabAudioCapture) throw new Error("A tab recording is already running");
+  if (!(await chrome.permissions.contains({ permissions: ["tabCapture"] }))) {
+    throw new Error("Tab capture permission was not granted");
+  }
+
+  const tab = await chrome.tabs.get(tabId);
+  const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tabId });
+  await ensureOffscreenDocument();
+
+  const response = await chrome.runtime.sendMessage({
+    target: "offscreen",
+    type: "offscreenStartCapture",
+    streamId
+  });
+  if (response?.error) {
+    await closeOffscreenDocument();
+    throw new Error(response.error);
+  }
+
+  tabAudioCapture = { tabId, startedAt: Date.now(), title: tab.title || "tab-audio" };
+  broadcast({ type: "captureUpdated" });
+  return { ok: true };
+}
+
+async function stopTabAudioCapture() {
+  await ready;
+  if (!tabAudioCapture) throw new Error("No tab recording is running");
+
+  const capture = tabAudioCapture;
+  tabAudioCapture = null;
+
+  let response;
+  try {
+    response = await chrome.runtime.sendMessage({
+      target: "offscreen",
+      type: "offscreenStopCapture"
+    });
+  } finally {
+    broadcast({ type: "captureUpdated" });
+  }
+
+  if (response?.error) {
+    await closeOffscreenDocument();
+    throw new Error(response.error);
+  }
+
+  const filename = `${slugify(capture.title, "tab-audio")}.webm`;
+  try {
+    const downloadId = await chrome.downloads.download({
+      url: response.url,
+      filename,
+      saveAs: false
+    });
+    await waitForDownload(downloadId);
+  } finally {
+    await closeOffscreenDocument();
+  }
+
+  return { ok: true, filename, bytes: response.bytes };
+}
+
+async function abandonTabAudioCapture() {
+  if (!tabAudioCapture) return;
+  tabAudioCapture = null;
+  await chrome.runtime
+    .sendMessage({ target: "offscreen", type: "offscreenStopCapture" })
+    .catch(() => undefined);
+  await closeOffscreenDocument();
+  broadcast({ type: "captureUpdated" });
+}
+
 async function stateFor(tabId) {
   await ready;
   connectNativeHost();
@@ -706,11 +818,17 @@ async function stateFor(tabId) {
     pageFallback,
     deepDetectionEnabled: await deepDetectionEnabled(tab),
     useHeadingForName,
-    headingPermission: await chrome.permissions.contains({ permissions: ["scripting"] })
+    headingPermission: await chrome.permissions.contains({ permissions: ["scripting"] }),
+    capture: tabAudioCapture
+      ? { tabId: tabAudioCapture.tabId, startedAt: tabAudioCapture.startedAt }
+      : null,
+    capturePermission: await chrome.permissions.contains({ permissions: ["tabCapture"] })
   };
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.target === "offscreen") return undefined;
+
   let operation;
   if (message?.type === "getState") {
     operation = stateFor(message.tabId);
@@ -730,6 +848,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     operation = captureInlineManifest(message, sender);
   } else if (message?.type === "setHeadingPreference") {
     operation = setHeadingPreference(Boolean(message.enabled));
+  } else if (message?.type === "startTabAudioCapture") {
+    operation = startTabAudioCapture(message.tabId);
+  } else if (message?.type === "stopTabAudioCapture") {
+    operation = stopTabAudioCapture();
   } else {
     operation = Promise.reject(new Error("Unknown extension message"));
   }

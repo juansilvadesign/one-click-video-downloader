@@ -15,6 +15,7 @@ const elements = {
   headingOption: document.querySelector("#heading-option"),
   useHeading: document.querySelector("#use-heading"),
   enableDeep: document.querySelector("#enable-deep"),
+  recordAudio: document.querySelector("#record-audio"),
   error: document.querySelector("#error")
 };
 
@@ -91,6 +92,8 @@ function render(state) {
     elements.planDetail.textContent = "Detection happens automatically.";
   }
 
+  renderCapture(state);
+
   elements.host.textContent = plan?.mode === "direct"
     ? "FFmpeg available as fallback"
     : host?.message || "Checking local FFmpeg…";
@@ -105,6 +108,18 @@ function statusLabel(job) {
 
 function jobName(job) {
   return job.title ? `${job.title}.mp4` : job.label || "Download";
+}
+
+function renderCapture(state) {
+  const capture = state.capture;
+  const otherTab = Boolean(capture) && capture.tabId !== tabId;
+
+  elements.recordAudio.textContent = !capture
+    ? "Record tab audio"
+    : otherTab
+      ? "Recording another tab"
+      : "Stop and save audio";
+  elements.recordAudio.disabled = otherTab;
 }
 
 function renderJobs(jobList) {
@@ -268,6 +283,28 @@ elements.enableDeep.addEventListener("click", async () => {
   }
 });
 
+elements.recordAudio.addEventListener("click", async () => {
+  const recording = Boolean(currentState?.capture);
+  elements.recordAudio.disabled = true;
+  elements.error.classList.add("hidden");
+  try {
+    if (recording) {
+      const response = await chrome.runtime.sendMessage({ type: "stopTabAudioCapture" });
+      if (response?.error) throw new Error(response.error);
+    } else {
+      const granted = await chrome.permissions.request({ permissions: ["tabCapture"] });
+      if (!granted) throw new Error("Tab capture permission was not granted");
+      const response = await chrome.runtime.sendMessage({ type: "startTabAudioCapture", tabId });
+      if (response?.error) throw new Error(response.error);
+    }
+  } catch (error) {
+    showError(error.message);
+  } finally {
+    elements.recordAudio.disabled = false;
+    await refresh();
+  }
+});
+
 elements.clear.addEventListener("click", async () => {
   await chrome.runtime.sendMessage({ type: "clearTab", tabId });
   await refresh();
@@ -275,7 +312,7 @@ elements.clear.addEventListener("click", async () => {
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === "mediaUpdated" && message.tabId !== tabId) return;
-  if (["mediaUpdated", "stateUpdated"].includes(message.type)) void refresh();
+  if (["mediaUpdated", "stateUpdated", "captureUpdated"].includes(message.type)) void refresh();
 });
 
 void initialize();
