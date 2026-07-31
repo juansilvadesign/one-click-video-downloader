@@ -75,6 +75,7 @@ The installed native host uses its own production `.venv`, created and bound by 
 - Reading the page `<h1>` for filenames is opt-in and on-gesture; keep `scripting` optional and fall back to the tab title when it is absent or injection is blocked.
 - `extension/power.js` owns reference-counted wake-lock leases.
 - `extension/deep-main.js` and `deep-isolated.js` are an opt-in HLS-only fallback, not the normal detector.
+- `extension/offscreen.js` records tab audio behind the optional `tabCapture` permission (MV3 service workers cannot run `MediaRecorder`). It must re-route the stream through an `AudioContext` so capture does not mute the tab, and its output goes to `chrome.downloads` — never through Native Messaging.
 
 Prefer pure, deterministic functions for classification, scoring, pairing, and state transitions. Candidate improvements must account for document, frame, navigation generation, and playback session; do not add another tab-wide heuristic without fixtures.
 

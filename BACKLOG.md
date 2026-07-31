@@ -37,6 +37,7 @@ This backlog preserves the extension's core constraint: one user action should p
 | OCVD-016 | P2 | Expired signed-URL reacquisition | Conditional |
 | OCVD-017 | P2 | Auto-rename downloads from the page title/heading | Released |
 | OCVD-018 | P1 | Concurrent local downloads | Released |
+| OCVD-019 | P1 | Tab audio capture for session-bound players | Implemented; Windows Chrome verification pending |
 
 ## P0 — Reliability and control
 
@@ -561,3 +562,36 @@ These ideas were present in the references but do not currently justify their co
 - [x] Windows Chrome installation and upgrade instructions are updated.
 - [x] The localhost HTTP smoke test covers retries, inline HLS, merging, and selective codecs.
 - [x] A manual Windows Chrome smoke test passes before marking the item complete.
+
+### OCVD-019 — Tab audio capture for session-bound players
+
+**Priority:** P1
+
+**Status:** Implemented; Windows Chrome verification pending.
+
+**Outcome:** The user can save the audio of a video that no URL-based path can retrieve, by recording what the authorized browser session already decodes.
+
+**Why:** Some players bind media delivery to the browser session rather than to request headers. Measured on a VTurb/ConverteAI VSL: the `<video>` element holds a 2×2 px, 0.12 s decoy (`cdn.converteai.net/1.mp4`) while real playback runs through MSE; the HLS manifest sits behind a per-session path token; and the **same** manifest URL returns real segments to the originating session but a `00000/mock-video/` decoy to any other client, including one replaying identical `User-Agent`, `Referer`, and `Origin`. Automated Chromium received the decoy on 2 of 3 runs. No `#EXT-X-KEY` and no EME are involved, so this is access binding, not DRM.
+
+That behavior is structurally incompatible with this project's architecture, which hands URLs plus headers to an out-of-process FFmpeg: the host is a different client and receives the decoy. Recording the decoded output sidesteps the mismatch without attacking the protection, and generalizes to any MSE player instead of one vendor.
+
+**Scope:**
+
+- Optional `tabCapture` permission requested on a user gesture; `offscreen` stays required because it grants no capture ability by itself.
+- Offscreen document (MV3 service workers cannot run `MediaRecorder`) records the tab stream as WebM/Opus.
+- Re-route the captured stream through an `AudioContext` to `destination` so `tabCapture` does not mute the tab for the user.
+- Save through `chrome.downloads` using the existing `slugify` page-title naming; wait for download completion before closing the offscreen document so the blob URL stays valid.
+- Audio only. Stage 1 of the transcription pipeline consumes audio; video would add size without adding transcript.
+- Abandon the recording and close the offscreen document if the captured tab is closed.
+
+**Acceptance criteria:**
+
+- [x] `tabCapture` is optional and absent from required permissions (`tests/manifest.test.mjs`).
+- [x] Captured media never crosses Native Messaging (`tests/manifest.test.mjs`).
+- [x] The capture path re-routes audio so the tab stays audible (`tests/manifest.test.mjs`).
+- [x] A manual Windows Chrome smoke test records a session-bound VSL end to end and produces a playable file. Verified 2026-07-31 on a VTurb VSL: 29m22.8s WebM/Opus 48 kHz stereo, decoded end to end with zero errors, silence only at the two edges (4.6 s lead-in, 8.7 s tail) and no mid-recording dropout; −18.3 LUFS integrated, LRA 8.2 LU.
+- [ ] Closing the tab mid-recording releases the offscreen document without leaving a stuck job.
+
+**Known rough edge:** `MediaRecorder` writes streaming WebM and never seeks back to fill the `Duration` element, so the saved file reports `duration=N/A` and `bit_rate=N/A` until it is remuxed. Harmless for playback, but downstream tools that need duration or seek will trip on it. A `-c copy` remux fixes it.
+
+**Deferred:** driving `playbackRate` above 1× to record faster than real time. The target players keep the media element inside a closed shadow root, so it needs a `MAIN`-world `HTMLMediaElement.prototype` patch at `document_start` — page injection, which the normal path deliberately avoids. Should stay opt-in and separately gated if taken up.

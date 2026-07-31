@@ -52,6 +52,7 @@ Linux/WSL:
 - `popup.js` — the selected plan, explicit fallbacks, and the live multi-job list; do not move durable state into the popup.
 - `power.js` — reference-counted wake-lock leases, already keyed by job id (supports overlapping jobs).
 - `deep-main.js` / `deep-isolated.js` — opt-in HLS-only fallback, not the normal detector.
+- `offscreen.js` — tab audio recording behind the optional `tabCapture` permission (MV3 service workers cannot run `MediaRecorder`). Re-route the stream through an `AudioContext` so capture does not mute the tab; send output to `chrome.downloads`, never through Native Messaging.
 
 Prefer pure, deterministic functions for classification, scoring, pairing, slugging, and state transitions. Candidate improvements must account for document, frame, navigation generation, and playback session; do not add another tab-wide heuristic without fixtures.
 

@@ -40,6 +40,7 @@ injects nothing into pages.
 | `cookies` | Only if you enable cookie handoff for a page fallback; disabled by default, written to a private temporary Netscape file, deleted on every terminal path |
 | `scripting` | Only for the opt-in page-heading filename mode or deep HLS detection, on an explicit gesture |
 | `power` | Only for an optional, reference-counted wake lock while a native job runs |
+| `tabCapture` | Only for **Record tab audio**, on an explicit gesture; records the tab you selected, audio only, and the recording never leaves your machine |
 
 {% hint style="success" %}
 Output is written to a partial file first and **promoted only after ffprobe

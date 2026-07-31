@@ -29,6 +29,7 @@ The identity combines the page-video frame, play symbol, download action, and cu
 - Unique, sanitized filenames in the host operating system's Downloads directory.
 - Optional pinned yt-dlp page fallback when normal request detection finds nothing.
 - Optional per-site HLS Blob detection for manifests created entirely in page memory.
+- Optional tab audio recording for players that bind media delivery to the browser session.
 - Optional system wake lock while native processing is active.
 - Automatic kebab-case filenames from the page title (e.g. `showcase-video.mp4`), with an optional page-heading naming mode.
 - Up to three downloads at once, each with its own live progress; downloads keep running in the background if the popup closes.
@@ -257,6 +258,19 @@ You can run several downloads at once (up to three). Start one, switch to anothe
 
 Finished downloads stay listed so you can confirm them. Dismiss a single card with its **×**, or use **Clear finished** to remove them all at once. Clearing only tidies the popup list — it never deletes the saved files.
 
+### Record tab audio
+
+Some players bind media delivery to the browser session instead of to request headers, so an out-of-process downloader receives a decoy stream even with the correct URL and headers copied. **Record tab audio** covers that case by saving what your authorized session already decodes.
+
+1. Start playback in the tab.
+2. Open the popup and select **Record tab audio**, then approve the one-time `tabCapture` prompt.
+3. Let the tab play. It can sit in the background, and you will still hear it.
+4. Select **Stop and save audio**.
+
+The result is a WebM/Opus file in your Downloads directory, named from the page title. Recording runs in real time — there is no way to record faster than the media plays. Only one tab is recorded at a time, and closing the tab ends the recording without saving.
+
+This path is audio only, because its purpose is feeding transcription. Requires Chrome 109+ for the offscreen document.
+
 ## Verification
 
 `npm test` runs:
@@ -283,6 +297,7 @@ An optional localhost smoke test exercises a temporary HTTP failure, separate-tr
 - yt-dlp is invoked through the production `.venv`, ignores user configuration, disables plugin directories, and never self-updates.
 - Cookie handoff is disabled by default and uses a private temporary Netscape-format file when explicitly enabled.
 - In-memory manifests are limited to 2 MiB and may resolve only HTTP(S) remote references.
+- Tab audio recording is opt-in, records only the tab you selected, and writes through `chrome.downloads` without crossing Native Messaging.
 - Deep-detected manifests inherit only Origin, Referer, and User-Agent; arbitrary recent Cookie or Authorization values are not forwarded to a different manifest host.
 - The host manifest allows only the selected extension ID.
 - Everything stays local; no analytics or remote service is used.

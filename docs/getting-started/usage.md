@@ -58,3 +58,26 @@ If nothing is detected, the popup offers two opt-in fallbacks:
 
 An optional power prompt may appear before a native job. Denying it does not
 block the download; it only lets the system sleep normally.
+
+## Record tab audio
+
+Some players bind media delivery to the browser session rather than to request
+headers. An out-of-process downloader is then a different client and receives a
+decoy stream, even when the URL and headers are copied correctly. **Record tab
+audio** covers that case by saving what your authorized session already decodes.
+
+1. Start playback in the tab.
+2. Open the popup, select **Record tab audio**, and approve the one-time
+   `tabCapture` prompt.
+3. Let the tab play. It can sit in the background, and you still hear it.
+4. Select **Stop and save audio**.
+
+The result is a WebM/Opus file in your Downloads directory, named from the page
+title.
+
+{% hint style="info" %}
+Recording runs in real time — there is no way to record faster than the media
+plays. Only one tab is recorded at a time, and closing the tab ends the
+recording without saving. This path is audio only, because its purpose is
+feeding transcription. Requires Chrome 109+ for the offscreen document.
+{% endhint %}
