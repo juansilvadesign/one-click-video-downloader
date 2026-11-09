@@ -1,0 +1,8 @@
+# One-Click Video Downloader
+
+> A personal Manifest V3 extension for Chrome and Edge that detects the best source the page is already playing and saves a clean MP4. Direct files use your browser; adaptive and split streams are merged locally by FFmpeg. Best quality, local processing, no cloud.
+
+## Pages
+
+- [Home](https://one-click-video-downloader.juanpablosilva.com.br/): what the extension does and how it works
+- [Documentation](https://one-click-video-downloader.juanpablosilva.com.br/docs): setup, usage, reference
